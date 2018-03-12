@@ -94,6 +94,14 @@ How to build a KiTools Windows executable
 
 Result file is ``dist/KiTools.exe``.
 
+Pre-built executable
+--------------------
+
+A pre-built KiTools executable is provided here for Windows 64 bits systems.
+
+⬇⬇⬇ `KiTools_W64-v1.1.exe <https://drive.google.com/file/d/1fF8pPvQJQqYYfSs_Dg303ZawTPQvK7h9/view?usp=sharing>`_ ⬇⬇⬇
+
+⚠ Attention: this binary is built with the ``libusb-win32`` USB library and thus it is required to install it with Zadig for both *KiNOS DFU* and *KiNOS boot DFU* interfaces in order to use it for DFU firmware flashing purposes.
 
 Usage
 =====
