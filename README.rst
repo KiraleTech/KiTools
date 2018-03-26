@@ -55,7 +55,7 @@ driver is required in Windows.
 The DFU functionality requires the use of `PyUSB
 <https://github.com/pyusb/pyusb/>`_. It is required to install the ``libusbK``
 driver for the *KiNOS DFU* devices with `Zadig <http://zadig.akeo.ie/>`_. The
-build <http://libusb.info/>`libusb`_ DLL is provided here for Windows 32 bit
+build `libusb <http://libusb.info/>`_ DLL is provided here for Windows 32 bit
 and Windows 64 bit and there is no need to install it on the system.
 
 Linux
@@ -72,20 +72,20 @@ Installation
 ============
 ::
 
- $ python -m pip install .
+ python -m pip install .
 
 How to build a KiTools Windows executable
 -----------------------------------------
 
-1. Install `MS Visual Studio <https://www.visualstudio.com/>`_.
-2. Install `Python <https://www.python.org/>`_ 3.6 64 bits.
-3. Copy ``kitools\libusb\MS64\libusb-1.0.dll`` to ``C:\Windows\System32\``.
-4. Install pyinstaller
+- Install `MS Visual Studio <https://www.visualstudio.com/>`_.
+- Install `Python <https://www.python.org/>`_.
+- Copy ``kitools\libusb\MS64\libusb-1.0.dll`` to ``C:\Windows\System32\`` for Python 64 bits, or ``kitools\libusb\MS32\libusb-1.0.dll`` to ``C:\Windows\SysWOW64\`` for Python 32 bits.
+- Install pyinstaller
 ::
 
  python -m pip install pyinstaller
 
-5. Generate the executable
+- Generate the executable
 ::
 
  pyinstaller --onefile --icon images/logo.ico kitools/__main__.py -n KiTools
