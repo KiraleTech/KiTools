@@ -462,7 +462,7 @@ class KiDevice:
         self.mode = mode
 
     def __str__(self):
-        return '%-14s%-5s%-25s%-36s%s' % (self.port, self.mode, self.swver,
+        return '%-14s%-5s%-30s%-36s%s' % (self.port, self.mode, self.swver,
                                           self.snum, self.desc)
 
 

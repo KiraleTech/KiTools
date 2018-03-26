@@ -1,5 +1,6 @@
 '''Kirale firmware update functions'''
 
+import os
 import sys
 import struct
 import platform
@@ -15,18 +16,22 @@ from kitools import kiserial
 from kitools import kidfu
 from kitools import kicmds
 
-if platform.system() in 'Windows':
-    import usb.backend.libusb0 as libusb
-else:
-    import usb.backend.libusb1 as libusb
+import usb.backend.libusb1 as libusb1
 
 if sys.version_info > (3, 0):
     import queue as queue_
 else:
     import Queue as queue_
 
-KIRALE_VID = 0x2def
+# Set the libusb path
+if platform.system() in 'Windows':
+    LIBUSB_PATH = os.path.dirname(sys.argv[0])
+    if '32bit' in str(platform.architecture()):
+        LIBUSB_PATH += '\\libusb\\MS32\\libusb-1.0.dll'
+    else:
+        LIBUSB_PATH += '\\libusb\\MS64\\libusb-1.0.dll'
 
+KIRALE_VID = 0x2def
 
 def try_input(txt=None):
     '''Normal input but catching the keyboard interruption'''
@@ -56,9 +61,11 @@ def sys_exit(msg):
 def get_dfu_devices():
     '''Return a list of connected Kirale DFU devices'''
     dfus = []
-    try:
-        backend = libusb.get_backend()
-    except:
+    if platform.system() in 'Windows':
+        backend = libusb1.get_backend(find_library=lambda x: LIBUSB_PATH)
+    else:
+        backend = libusb1.get_backend()
+    if not backend:
         sys_exit('No USB library found.')
     devs = usb.core.find(idVendor=KIRALE_VID, find_all=True, backend=backend)
 
@@ -79,7 +86,7 @@ def get_dfu_devices():
                     dfu.set_alternate(dev_alt)
                     dfus.append(dfu)
         except usb.core.USBError:
-            pass
+            print('USB error for device %s' % dev.serial_number)
 
     return dfus
 
@@ -98,12 +105,16 @@ def dfu_find_and_flash(dfu_file):
             print(dfu)
         try_input('Press Enter to detach them all...')
         for dfu in run_dfus:
-            dfu.detach(0)
+            try:
+                dfu.detach(0)
+            except usb.core.USBError:
+                print('USB error for device %s' % dfu.dev.serial_number)
         # Wait until all devices are detached
-        dfus = []
-        while len(dfus) != num_dfus:
-            sleep(1)
-            dfus = get_dfu_devices()
+        sleep(3)
+        dfus = get_dfu_devices()
+        if len(dfus) < num_dfus:
+            sys_exit('Expecting at least %d DFU devices, found %d.' %
+                     (num_dfus, len(dfus)))
 
     # Flash bootloader running devices
     if dfus:
@@ -123,36 +134,37 @@ def dfu_find_and_flash(dfu_file):
 def dfu_flash(dfu, dfu_file, queue, pos=0):
     '''Flash a list of DFU devices with the given file'''
     snum = dfu.get_string(dfu.dev.iSerialNumber)
-    try:
-        # Clear left-over errors
-        if dfu.get_status()[1] == kidfu.DfuState.DFU_ERROR:
-            dfu.clear_status()
-        # Flash
-        blocks = [
-            dfu_file.data[i:i + 64] for i in range(0, len(dfu_file.data), 64)
-        ]
-        for bnum, block in enumerate(
-                tqdm(
-                    blocks,
-                    unit='block',
-                    miniters=1,
-                    desc=colorize(snum, Fore.CYAN),
-                    position=pos,
-                    dynamic_ncols=True,
-                    leave=False)):
+    # Clear left-over errors
+    if dfu.get_status()[1] == kidfu.DfuState.DFU_ERROR:
+        dfu.clear_status()
+    # Flash
+    blocks = [
+        dfu_file.data[i:i + 64] for i in range(0, len(dfu_file.data), 64)
+    ]
+    for bnum, block in enumerate(
+        tqdm(
+            blocks,
+            unit='block',
+            miniters=1,
+            desc=colorize(snum, Fore.CYAN),
+            position=pos,
+            dynamic_ncols=True,
+            leave=False)):
+        try:
             dfu.write(bnum, block)
             status = dfu.wait_while_state(kidfu.DfuState.DFU_DOWNLOAD_BUSY)
             if status[1] != kidfu.DfuState.DFU_DOWNLOAD_IDLE:
                 queue.put('%s: Error %d' % (snum, status[1]))
                 return
-        dfu.leave()
-        status = dfu.get_status()
-        if status[1] == kidfu.DfuState.DFU_MANIFEST_SYNC:
-            queue.put('%s: OK' % snum)
+        except usb.core.USBError:
+            queue.put('%s: USB error' % snum)
             return
-        queue.put('%s: Error finish' % snum)
-    except usb.core.USBError:
-        queue.put('%s: USB error' % snum)
+    dfu.leave()
+    status = dfu.get_status()
+    if status[1] == kidfu.DfuState.DFU_MANIFEST_SYNC:
+        queue.put('%s: OK' % snum)
+        return
+    queue.put('%s: Error finish' % snum)
 
 
 def kbi_find_and_flash(dfu_file):

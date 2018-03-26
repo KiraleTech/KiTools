@@ -40,7 +40,7 @@ class DfuDevice:
 
     def control_msg(self, requestType, request, value, buffer):
         return self.dev.ctrl_transfer(requestType, request, value,
-                                      self.intf.bInterfaceNumber, buffer)
+                                      self.intf.bInterfaceNumber, buffer, 0)
 
     def detach(self, timeout):
         return self.control_msg(DFU_REQUEST_SEND, DFU_DETACH, timeout, None)
@@ -107,8 +107,12 @@ class KiDfuDevice(DfuDevice):
         if self.get_status()[1] == DfuState.DFU_ERROR:
             self.clear_status()
         # Read version
-        bytes_ver = self.upload(0, 2)
-        return 'v%u.%u' % (bytes_ver[0], bytes_ver[1])
+        try:
+            bytes_ver = self.upload(0, 2)
+            return 'v%u.%u' % (bytes_ver[0], bytes_ver[1])
+        except usb.core.USBError:
+            return 'v?.?'
+        
 
     def __str__(self):
         return '\t0x%04x\t0x%04x\t%s\t%s %s\t%s' % (

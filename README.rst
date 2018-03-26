@@ -2,7 +2,7 @@
 KiNOS interfacing tools (KiTools)
 =================================
 
-This project provides a Python wrapper for the `KiNOS <https://kinos.io/>`_
+This project provides a Python wrapper for the `KiNOS <http://kinos.io/>`_
 devices' interfaces: KSH, KBI, DFU and Sniffer.
 
 .. image:: images/KiNOS-interfaces.png
@@ -53,12 +53,10 @@ For KSH, KBI and Sniffer support the program makes use of the `PySerial
 driver is required in Windows.
 
 The DFU functionality requires the use of `PyUSB
-<https://github.com/pyusb/pyusb/>`_, which currently does not support the more
-complete `libusbK <http://libusbk.sourceforge.net/UsbK3/index.html>`_, and has
-issues with `libusb-1.0 <http://libusb.sourceforge.net>`_. So, it is required by
-the moment to uninstall the ``libusbK`` driver and install the
-``libusb-win32`` driver for the *KiNOS DFU* devices with `Zadig
-<http://zadig.akeo.ie/>`_.
+<https://github.com/pyusb/pyusb/>`_. It is required to install the ``libusbK``
+driver for the *KiNOS DFU* devices with `Zadig <http://zadig.akeo.ie/>`_. The
+build <http://libusb.info/>`libusb`_ DLL is provided here for Windows 32 bit
+and Windows 64 bit and there is no need to install it on the system.
 
 Linux
 -----
@@ -74,34 +72,33 @@ Installation
 ============
 ::
 
- $ python setup.py install
+ $ python -m pip install .
 
 How to build a KiTools Windows executable
 -----------------------------------------
 
 1. Install `MS Visual Studio <https://www.visualstudio.com/>`_.
 2. Install `Python <https://www.python.org/>`_ 3.6 64 bits.
-3. Install the libusb-win32 driver with `Zadig <http://zadig.akeo.ie/>`_.
+3. Copy ``kitools\libusb\MS64\libusb-1.0.dll`` to ``C:\Windows\System32\``.
 4. Install pyinstaller
 ::
 
- pip install pyinstaller
+ python -m pip install pyinstaller
 
 5. Generate the executable
 ::
 
- pyinstaller --onefile --icon images/logo.png kitools/__main__.py -n KiTools
+ pyinstaller --onefile --icon images/logo.ico kitools/__main__.py -n KiTools
 
 Result file is ``dist/KiTools.exe``.
 
 Pre-built executable
 --------------------
 
-A pre-built KiTools executable is provided here for Windows 64 bits systems.
+A pre-built KiTools executable is provided here for Windows 32 bit systems
+(also working in 64 bit systems).
 
-⬇⬇⬇ `KiTools_W64-v1.1.exe <https://drive.google.com/file/d/1fF8pPvQJQqYYfSs_Dg303ZawTPQvK7h9/view?usp=sharing>`_ ⬇⬇⬇
-
-⚠ Attention: this binary is built with the ``libusb-win32`` USB library and thus it is required to install it with Zadig for both *KiNOS DFU* and *KiNOS boot DFU* interfaces in order to use it for DFU firmware flashing purposes.
+⬇⬇⬇ `KiTools-v1.0.1.exe <https://drive.google.com/open?id=1nYgvTjT0mEaNLrQOtBOAdwIBkYXQ1_Ou>`_ ⬇⬇⬇
 
 Usage
 =====
@@ -160,10 +157,7 @@ It is also possible to directly launch the capture without further user prompt.
 
 DFU flashing
 ------------
-The application allows to flash all the connected devices at the same time. The
-current PyUSB backend limitations makes the transfer time slower for Windows
-systems, but still is more convenient than programming several devices one
-after another.
+The application allows to flash all the connected devices at the same time.
 
 .. image:: images/KiTools-FlashDFU.apng
 
@@ -173,4 +167,3 @@ The UART interface can be used as well for firmware updating, for example with
 a USB to Serial adapter.
 
 .. image:: images/KiTools-FlashKBI.apng
-
