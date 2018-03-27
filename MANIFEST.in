@@ -1,0 +1,2 @@
+include kitools/libusb/MS32/libusb-1.0.dll
+include kitools/libusb/MS64/libusb-1.0.dll

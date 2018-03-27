@@ -56,6 +56,7 @@ setup(
     ],
     keywords='kinos serial tools',
     packages=['kitools'],
+    include_package_data=True,
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['colorama', 'iptools', 'pyserial', 'pyusb', 'tqdm'],
     entry_points={
