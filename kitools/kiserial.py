@@ -214,7 +214,8 @@ class KiSerial:
             debug = self.debug
             self.debug = KiDebug(debug_level)
         # Print command
-        self.debug.print_(KiDebug.KSH, self.ksh2str(txt_cmd, color=Fore.GREEN))
+        if txt_cmd:
+            self.debug.print_(KiDebug.KSH, self.ksh2str(txt_cmd, color=Fore.GREEN))
         elapsed = 0
         try:
             # UART command
@@ -274,7 +275,7 @@ class KiSerial:
     def get_logs(self, wait=0):
         '''Stop device logs and return them'''
         for _ in repeat(None, wait):
-            self.ksh_cmd(' ', debug_level=KiDebug.LOGS)
+            self.ksh_cmd('', debug_level=KiDebug.LOGS)
             sleep(1)
         self.ksh_cmd('debug module none', debug_level=KiDebug.LOGS)
         self.ksh_cmd('debug level none', debug_level=KiDebug.LOGS)
