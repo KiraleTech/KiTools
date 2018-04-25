@@ -17,6 +17,7 @@ from kitools import kidfu
 from kitools import kicmds
 
 import usb.backend.libusb1 as libusb1
+BACKEND = None
 
 if sys.version_info > (3, 0):
     import queue as queue_
@@ -58,18 +59,16 @@ def sys_exit(msg):
     sys.exit(colorize(msg, Fore.RED))
 
 
+def get_usb_devices(vid=None, pid=None, serial=None):
+    '''Return a list of connected Kirale USB devices'''
+    return usb.core.find(idVendor=KIRALE_VID, find_all=True, backend=BACKEND)
+
+
 def get_dfu_devices():
     '''Return a list of connected Kirale DFU devices'''
     dfus = []
-    if platform.system() in 'Windows':
-        backend = libusb1.get_backend(find_library=lambda x: LIBUSB_PATH)
-    else:
-        backend = libusb1.get_backend()
-    if not backend:
-        sys_exit('No USB library found.')
-    devs = usb.core.find(idVendor=KIRALE_VID, find_all=True, backend=backend)
 
-    for dev in devs:
+    for dev in get_usb_devices():
         # Detach kernel driver
         if platform.system() not in 'Windows':
             for config in dev:
@@ -93,6 +92,15 @@ def get_dfu_devices():
 
 def dfu_find_and_flash(dfu_file):
     '''Flash a DFU file'''
+    # Initialize backend
+    global BACKEND
+    if platform.system() in 'Windows':
+        BACKEND = libusb1.get_backend(find_library=lambda x: LIBUSB_PATH)
+    else:
+        BACKEND = libusb1.get_backend()
+    if not BACKEND:
+        sys_exit('No USB library found.')
+
     # Count DFU devices
     dfus = get_dfu_devices()
     num_dfus = len(dfus)
@@ -107,6 +115,7 @@ def dfu_find_and_flash(dfu_file):
         for dfu in run_dfus:
             try:
                 dfu.detach(0)
+                del dfu
             except usb.core.USBError:
                 print('USB error for device %s' % dfu.dev.serial_number)
         # Wait until all devices are detached

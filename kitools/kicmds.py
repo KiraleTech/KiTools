@@ -39,6 +39,8 @@ RC_FWUERR = 0x07
 NC_PINGR = 0x00
 NC_UDP = 0x01
 NC_DSTUN = 0x04
+NC_PINGR_N = 0x05
+NC_UDP_N = 0x06
 
 # Roles
 ROLES = {
@@ -96,9 +98,10 @@ class TYP:
     STDATA = 7
     STATUS = 8
     TIME = 9
+    STRN = 10
 
 
-def s2b(type_, str_, size=None):
+def s2b(type_, str_, size=0):
     '''String to bytearray transformation'''
 
     if type_ is TYP.DEC:
@@ -108,7 +111,10 @@ def s2b(type_, str_, size=None):
         if len(str_) % 2 == 0 and str_.startswith('0x'):
             return bytearray.fromhex(str_.replace('0x', ''))
     elif type_ is TYP.STR:
-        return bytearray(list(map(ord, str_))) + bytearray([0])
+        return bytearray(list(map(ord, str_))) + bytearray(1)
+    elif type_ is TYP.STRN:
+        str_bytes = bytearray(list(map(ord, str_[:size])))
+        return str_bytes + bytearray(size - len(str_bytes) + 1)
     elif type_ is TYP.MAC:
         return s2b(TYP.HEX, '0x' + str_.replace('-', ''))
     elif type_ is TYP.ADDR:
@@ -213,6 +219,8 @@ TEXT2CLI = {
     'show vswver': {'type': CT_CMD, 'code': 0x35 | OP_READ},
     'config actstamp': {'type': CT_CMD, 'code': 0x36 | OP_WRITE, 'params': [lambda x: s2b(TYP.HEX, x)]},
     'show actstamp': {'type': CT_CMD, 'code': 0x36 | OP_READ, 'params': [lambda x: s2b(TYP.HEX, x)]},
+    'nping': {'type': CT_CMD, 'code': 0x37 | OP_EXEC, 'params': [lambda x: s2b(TYP.STRN, x, 31), lambda x: s2b(TYP.DEC, x, 2)]},
+    'nnetcat': {'type': CT_CMD, 'code': 0x38 | OP_EXEC, 'params': [lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.STRN, x, 31), lambda x: s2b(TYP.HEX, x)]},
     # Test Harness Specific Commands
     'config provurl': {'type': CT_GOL, 'code': 0x00 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
     'show commsid': {'type': CT_GOL, 'code': 0x01 | OP_READ},
@@ -272,6 +280,8 @@ def b2s(type_, bytes_, size=None):
     if type_ is TYP.CHAR:
         str_ = ''
         for byte in bytes_:
+            if byte == 0:
+                break
             str_ += chr(byte)
         return str_
     elif type_ is TYP.HEX:
@@ -511,12 +521,26 @@ class KBIResponse(KBICommand):
                     b2s(TYP.DEC, payload[18:20], 2),
                     b2s(TYP.DEC, payload[20:22], 2),
                     b2s(TYP.DEC, payload[16:18], 2))
-            if code == NC_UDP:
+            elif code == NC_PINGR_N:
+                return '# ping reply: saddr %s [%s] id %s sq %s - %s bytes' % (
+                    b2s(TYP.ADDR, payload[32:48], 16).rstrip('\r\n'),
+                    b2s(TYP.CHAR, payload[0:32], 32),
+                    b2s(TYP.DEC, payload[50:52], 2),
+                    b2s(TYP.DEC, payload[52:54], 2),
+                    b2s(TYP.DEC, payload[48:50], 2))
+            elif code == NC_UDP:
                 return '# udp rcv: saddr %s sport %s dport %s - %s bytes' % (
                     b2s(TYP.ADDR, payload[4:20], 16).rstrip('\r\n'),
                     b2s(TYP.DEC, payload[2:4], 2),
                     b2s(TYP.DEC, payload[0:2], 2),
                     len(payload[20:]))
+            elif code == NC_UDP_N:
+                return '# udp rcv: saddr %s [%s] sport %s dport %s - %s bytes' % (
+                    b2s(TYP.ADDR, payload[36:52], 16).rstrip('\r\n'),
+                    b2s(TYP.CHAR, payload[4:35], 31),
+                    b2s(TYP.DEC, payload[2:4], 2),
+                    b2s(TYP.DEC, payload[0:2], 2),
+                    len(payload[52:]))
             elif code == NC_DSTUN:
                 return '# dst unreachable: daddr %s' % b2s(
                     TYP.ADDR, payload[0:16], 16).rstrip('\r\n')
