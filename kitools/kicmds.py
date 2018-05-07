@@ -99,6 +99,7 @@ class TYP:
     STATUS = 8
     TIME = 9
     STRN = 10
+    SERV = 11
 
 
 def s2b(type_, str_, size=0):
@@ -221,6 +222,7 @@ TEXT2CLI = {
     'show actstamp': {'type': CT_CMD, 'code': 0x36 | OP_READ, 'params': [lambda x: s2b(TYP.HEX, x)]},
     'nping': {'type': CT_CMD, 'code': 0x37 | OP_EXEC, 'params': [lambda x: s2b(TYP.STRN, x, 31), lambda x: s2b(TYP.DEC, x, 2)]},
     'nnetcat': {'type': CT_CMD, 'code': 0x38 | OP_EXEC, 'params': [lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.STRN, x, 31), lambda x: s2b(TYP.HEX, x)]},
+    'show services': {'type': CT_CMD, 'code': 0x39 | OP_READ},
     # Test Harness Specific Commands
     'config provurl': {'type': CT_GOL, 'code': 0x00 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
     'show commsid': {'type': CT_GOL, 'code': 0x01 | OP_READ},
@@ -330,6 +332,12 @@ def b2s(type_, bytes_, size=None):
             '%H:%M:%S', gmtime(utc))
         output += 'MCU Temperature  : %d°C' % temperature
         return output
+    elif type_ is TYP.SERV:
+        meaning = {0x01: 'on', 0x00: 'off'}
+        output = 'DHCP server: ' + meaning[bytes_[0]]
+        output += '\nDNS server: ' + meaning[bytes_[1]]
+        output += '\nNTP server: ' + meaning[bytes_[2]]
+        return output
 
 
 CLI2TEXT = {
@@ -374,6 +382,7 @@ CLI2TEXT = {
     (CT_RSC | RC_VALUE, 0x34 | OP_READ): ['vdata', lambda x: b2s(TYP.CHAR, x)],
     (CT_RSC | RC_VALUE, 0x35 | OP_READ): ['vswver', lambda x: b2s(TYP.CHAR, x)],
     (CT_RSC | RC_VALUE, 0x36 | OP_READ): ['actstamp', lambda x: b2s(TYP.HEX, x)],
+    (CT_RSC | RC_VALUE, 0x39 | OP_READ): ['services', lambda x: b2s(TYP.SERV, x)],
     (CT_RSG | RC_VALUE, 0x01 | OP_READ): ['commsid', lambda x: b2s(TYP.HEX, x)],
     (CT_RSG | RC_VALUE, 0x0b | OP_READ): ['kseqcounter', lambda x: b2s(TYP.DEC, x)]
 }
