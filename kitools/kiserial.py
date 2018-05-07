@@ -254,9 +254,9 @@ class KiSerial:
 
     def wait_for(self, key, value, inverse=False):
         '''Keep sending the command "show <key>" until <value> is found
-        in the response or 120 seconds have passed'''
+        in the response or 60 seconds have passed'''
         vset = set(value)
-        for _ in repeat(None, 120):
+        for _ in repeat(None, 60):
             rset = set(self.ksh_cmd('show %s' % key, debug_level=KiDebug.NONE))
             # Finish if value is found in the response
             if not inverse and not rset.isdisjoint(vset):
@@ -271,15 +271,21 @@ class KiSerial:
         self.logs = []
         self.ksh_cmd('debug module %s' % module, debug_level=KiDebug.LOGS)
         self.ksh_cmd('debug level %s' % level, debug_level=KiDebug.LOGS)
-
-    def get_logs(self, wait=0):
-        '''Stop device logs and return them'''
-        for _ in repeat(None, wait):
+    
+    def wait_for_log(self, value, secs):
+        '''Wait until the string "value" appears in the logs or "secs" seconds
+        have passed, and disable all device logs'''
+        for _ in repeat(None, secs):
             self.ksh_cmd('', debug_level=KiDebug.LOGS)
+            if value in ' '.join(self.logs):
+                break
             sleep(1)
         self.ksh_cmd('debug module none', debug_level=KiDebug.LOGS)
         self.ksh_cmd('debug level none', debug_level=KiDebug.LOGS)
         self.flush_buffer()
+
+    def get_logs(self):
+        '''Return device logs'''
         return self.logs
 
     def ksh2str(self, cmd, color=Fore.GREEN):
