@@ -85,7 +85,7 @@ def get_dfu_devices():
                     dfu.set_alternate(dev_alt)
                     dfus.append(dfu)
         except usb.core.USBError:
-            print('USB error for device %s' % dev.serial_number)
+            pass
 
     return dfus
 
@@ -117,7 +117,7 @@ def dfu_find_and_flash(dfu_file):
                 dfu.detach(0)
                 del dfu
             except usb.core.USBError:
-                print('USB error for device %s' % dfu.dev.serial_number)
+                pass
         # Wait until all devices are detached
         sleep(3)
         dfus = get_dfu_devices()
@@ -251,6 +251,8 @@ def parallel_program(flash_func, devices, dfu_file):
     queue = queue_.Queue()
     threads = []
     results = []
+    tqdm.monitor_interval = 0
+
     for pos, dev in enumerate(devices):
         threads.append(
             Thread(target=flash_func, args=[dev, dfu_file, queue, pos]))
