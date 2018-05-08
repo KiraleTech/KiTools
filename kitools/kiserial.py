@@ -354,10 +354,10 @@ class KiSerialTh(KiSerial):
             # KSH
             else:
                 for char in data.decode('latin_1'):
-                    if char is '#':
+                    if char == '#':
                         log_start = True
                     if log_start:
-                        if char is '\n':
+                        if char == '\n':
                             log_start = False
                             self.logs.append(log_line)
                             self.debug.print_(KiDebug.LOGS, log_line)
