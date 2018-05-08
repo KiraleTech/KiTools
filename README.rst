@@ -98,7 +98,7 @@ Pre-built executable
 A pre-built KiTools executable is provided here for Windows 32 bit systems
 (also working in 64 bit systems).
 
-⬇⬇⬇ `KiTools-v1.0.1.exe <https://drive.google.com/open?id=1nYgvTjT0mEaNLrQOtBOAdwIBkYXQ1_Ou>`_ ⬇⬇⬇
+⬇⬇⬇ `KiTools-v1.1.0.exe <https://drive.google.com/open?id=1hdN_51vid7VrUvegT4DYXCp8SKlC24Rh>`_ ⬇⬇⬇
 
 Usage
 =====
