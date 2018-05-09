@@ -61,6 +61,7 @@ class KiSerial:
     KBI_ERRORS = {-1: ' COBS error.', -2: ' Read timeout.'}
 
     def __init__(self, port_name, baud=115200, debug=KiDebug()):
+        self.valid = False
         self.name = port_name
         self.hex_mac = ''
         self.debug = KiDebug()
@@ -111,11 +112,13 @@ class KiSerial:
 
     def is_valid(self):
         '''Determine if the device is a valid Kirale device'''
+        if self.valid:
+            return True
         if self.port:
             snum = self.ksh_cmd('show snum') or ['']
             if snum[0].startswith('KT'):
-                return True
-        return False
+                self.valid = True
+        return self.valid
 
     def is_active(self):
         '''Check if the device has been disconnected'''
@@ -179,13 +182,14 @@ class KiSerial:
             self.debug.print_(KiDebug.KBI, error)
         return None, 0
 
-    def usb_cmd(self, cmd, no_response=False):
+    def usb_cmd(self, cmd, no_request=False, no_response=False):
         '''Send a command via USB CDC'''
         cmd_out = bytearray()
         response = []
 
         cmd_start = clock()
-        self.port.write((cmd + '\r').encode('latin_1'))
+        if not no_request:
+            self.port.write((cmd + '\r').encode('latin_1'))
         if no_response:
             elapsed = clock() - cmd_start
             return response, elapsed
@@ -206,7 +210,8 @@ class KiSerial:
                 response.append(line)
         return response, elapsed
 
-    def ksh_cmd(self, txt_cmd, debug_level=None, no_response=False):
+    def ksh_cmd(self, txt_cmd, debug_level=None, no_request=False,
+                no_response=False):
         '''Send a text command'''
         cmd_out = []
         # Save debug setting and stop debug
@@ -276,7 +281,7 @@ class KiSerial:
         '''Wait until the string "value" appears in the logs or "secs" seconds
         have passed, and disable all device logs'''
         for _ in repeat(None, secs):
-            self.ksh_cmd('', debug_level=KiDebug.LOGS)
+            self.ksh_cmd('', no_request=True, debug_level=KiDebug.LOGS)
             if value in ' '.join(self.logs):
                 break
             sleep(1)

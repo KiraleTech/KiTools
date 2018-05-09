@@ -80,7 +80,7 @@ class KiSniffer:
         self.usec = 0
         self.serial_dev = kiserial.KiSerial(port_name, debug=serial_debug)
         self.reset()
-
+        
     def config_file_handler(self, pcap_file=None, pcap_folder=None):
         '''Set up a file handler to store the received frames'''
         if not pcap_file:
@@ -159,7 +159,8 @@ class KiSniffer:
 
     def reset(self):
         '''Reset device'''
-        status = self.serial_dev.ksh_cmd('show status', True)
+        status = self.serial_dev.ksh_cmd('show status', kiserial.KiDebug.NONE,
+          True)
         if status and status[0] == 'none':
             return
         self.serial_dev.ksh_cmd('clear')
