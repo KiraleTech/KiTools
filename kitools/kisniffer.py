@@ -136,7 +136,7 @@ class KiSniffer:
             if frame_len is not None:
                 frame_data = self.serial_dev.port.read(frame_len)
                 if len(frame_data) == frame_len:
-                    self.usec += tstamp
+                    self.usec = tstamp * 16
                     frame = PCAPFrame(frame_data, self.usec)
                     for handler in self.handlers:
                         handler.handle(frame)
