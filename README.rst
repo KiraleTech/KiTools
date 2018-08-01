@@ -95,17 +95,15 @@ Result file is ``dist/KiTools.exe``.
 Pre-built executable
 --------------------
 
-A pre-built KiTools executable is provided here for Windows 32 bit systems
+A pre-built `KiTools <https://www.kirale.com/support/#downloads>`executable is provided here for Windows 32 bit systems
 (also working in 64 bit systems).
-
-⬇⬇⬇ `KiTools-v1.1.0.exe <https://drive.google.com/open?id=1hdN_51vid7VrUvegT4DYXCp8SKlC24Rh>`_ ⬇⬇⬇
 
 Usage
 =====
 ::
 
  $ python -m kitools --help
- usage: kitool [-h] [--version] [--port PORT]
+ usage: KiTools [-h] [--version] [--port PORT]
               [--channel {11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26}]
               [--live] [--file FILE] [--debug {0,1,2,3,4}]
               [--flashdfu FLASHDFU] [--flashkbi FLASHKBI]

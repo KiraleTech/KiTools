@@ -27,10 +27,10 @@ setup(
     description='KiNOS interfacing tools',
     long_description=LONG_DESC,
     # The project's main homepage.
-    url='https://github.com/KiraleTechnologies/kitools',
+    url='https://github.com/KiraleTech/KiTools',
     # Author details
     author='Kirale Technologies',
-    author_email='emontoya@kirale.com',
+    author_email='info@kirale.com',
     license='MIT',
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

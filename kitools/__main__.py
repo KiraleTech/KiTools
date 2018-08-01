@@ -95,9 +95,9 @@ def capture(sniffer, channel):
 def main():
     '''Parse input and start threads'''
     parser = argparse.ArgumentParser(
-        prog='kitool',
+        prog='KiTools',
         description='Serial interface to the KiNOS KBI, KSH, DFU and Sniffer')
-    parser.add_argument('--version', action='version', version='%(prog)s 1.1')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.2')
     parser.add_argument(
         '--port', required=False, type=str, help='serial device to use')
     parser.add_argument(
