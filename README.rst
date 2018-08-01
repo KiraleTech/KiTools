@@ -95,7 +95,7 @@ Result file is ``dist/KiTools.exe``.
 Pre-built executable
 --------------------
 
-A pre-built `KiTools <https://www.kirale.com/support/#downloads>`executable is provided here for Windows 32 bit systems
+A pre-built `KiTools <https://www.kirale.com/support/#downloads>`_ executable is provided here for Windows 32 bit systems
 (also working in 64 bit systems).
 
 Usage
