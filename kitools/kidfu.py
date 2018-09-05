@@ -21,9 +21,9 @@ DFU_ABORT = 0x06
 class DfuDevice:
     def __init__(self, device):
         self.dev = device
-        self.cfg = self.dev[0]
-        self.intf = None
-        self.cfg.set()
+        self.dev.set_configuration()
+        self.cfg = self.dev.get_active_configuration()
+        self.intf = self.cfg[(0,0)]
 
     def alternates(self):
         return [(self.get_string(intf.iInterface), intf) for intf in self.cfg]
@@ -121,7 +121,7 @@ class KiDfuDevice(DfuDevice):
             self.get_string(self.dev.iProduct),
             self._get_boot_ver(),
             self.get_string(self.dev.iSerialNumber))
-
+    
 
 def parse(fmt, data, names):
     '''Return dict from data'''
