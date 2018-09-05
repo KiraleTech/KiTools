@@ -91,7 +91,7 @@ class KiSerial:
         '''Other needed init operations'''
         if self.is_valid():
             self.port.timeout = 3
-            self.port.writeTimeout = 3
+            self.port.writeTimeout = 0
 
     def close(self):
         '''Optional closing operations'''
@@ -181,6 +181,23 @@ class KiSerial:
             error = self.KBI_ERRORS.get(size, ' Decode error.')
             self.debug.print_(KiDebug.KBI, error)
         return None, 0
+    
+    def handshaking_failure(self, message):
+        '''
+        A failure in the application level handshaking (i.e. PC sends a 
+        packet and does not receive an acknowledgement from the device).
+        This is a more subtle error where Windows shuts down an 
+        individual pipe on a device, but the device remains in the 
+        hardware list. These errors must be detected by the application.
+        Recovery from these involves closing the COM port and then 
+        waiting for the device to perform a soft-detach (COM port 
+        disappears, caused by the error detection and recovery of the 
+        embedded CDC device) and re-attach (COM port re-appears after 
+        enumeration).
+        '''
+        self.port.close()
+        sleep(3)       
+        self.debug.print_(KiDebug.DEBUG, message)
 
     def usb_cmd(self, cmd, no_request=False, no_response=False):
         '''Send a command via USB CDC'''
@@ -196,7 +213,7 @@ class KiSerial:
         while KSHPROMPT.encode('latin_1') not in cmd_out:
             char = self.port.read(1)
             if not char:
-                self.debug.print_(KiDebug.DEBUG, ' Read timeout.')
+                self.handshaking_failure('Read timeout')
                 break  # Read timeout
             rest = self.port.read(self.port.in_waiting)
             cmd_out += char + rest
@@ -213,6 +230,9 @@ class KiSerial:
     def ksh_cmd(self, txt_cmd, debug_level=None, no_request=False,
                 no_response=False):
         '''Send a text command'''
+        if not self.port.isOpen():
+            self.port.open()
+            
         cmd_out = []
         # Save debug setting and stop debug
         if debug_level is not None:
@@ -242,8 +262,10 @@ class KiSerial:
             else:
                 cmd_out, elapsed = self.usb_cmd(
                     txt_cmd, no_response=no_response)
-        except (serial.SerialException, serial.SerialTimeoutException):
-            cmd_out = ['Serial problem']
+        except:
+        #except (serial.SerialException, serial.SerialTimeoutException):
+            self.handshaking_failure('Command error')
+
         # Print the response
         for line in cmd_out:
             self.debug.print_(KiDebug.KSH,
