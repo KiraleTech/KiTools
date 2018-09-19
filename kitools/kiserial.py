@@ -165,10 +165,7 @@ class KiSerial:
             if not byte:
                 size = -2  # Read timeout
                 break
-            # Python 2 transformation
-            if isinstance(byte, str):
-                byte = bytearray([byte])
-            size = decoded.decode(byte[0])
+            size = decoded.decode(byte)
         elapsed = clock() - cmd_start
         # Print response
         self.debug.print_(KiDebug.KBI, decoded)

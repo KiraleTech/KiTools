@@ -76,6 +76,9 @@ class Decoder:
         '''Applies COBS decoding byte for byte. A decoding if finished
         when the return value is different from zero.'''
         ret = 0
+        # Python 2 transformation
+        if isinstance(byte, str):
+            byte = bytearray([byte])[0]
         self.inc += bytearray([byte])
 
         # Analyze code
