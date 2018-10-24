@@ -276,11 +276,11 @@ class KiSerial:
             self.debug = debug
         return cmd_out
 
-    def wait_for(self, key, value, inverse=False):
+    def wait_for(self, key, value, secs=120, inverse=False):
         '''Keep sending the command "show <key>" until <value> is found
-        in the response or 60 seconds have passed'''
+        in the response or <secs> seconds have passed'''
         vset = set(value)
-        for _ in repeat(None, 60):
+        for _ in repeat(None, secs):
             rset = set(self.ksh_cmd('show %s' % key, debug_level=KiDebug.NONE))
             # Finish if value is found in the response
             if not inverse and not rset.isdisjoint(vset):
