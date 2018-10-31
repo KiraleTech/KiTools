@@ -4,14 +4,15 @@ https://tools.ietf.org/html/draft-ietf-pppext-cobs-00'''
 from itertools import groupby
 from struct import unpack
 
-from colorama import Fore
+import colorama
 
 
 def _enc2str(encoded):
     '''Return encoded bytes array as a string'''
     string = '|'
     for byte in encoded:
-        string += (' %s%02x%s :' % (Fore.CYAN, byte, Fore.RESET))
+        string += (
+            ' %s%02x%s :' % (colorama.Fore.CYAN, byte, colorama.Fore.RESET))
     string += ('\b|')
     return string
 

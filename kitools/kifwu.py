@@ -9,11 +9,10 @@ from itertools import repeat
 from time import localtime, sleep, strftime, time
 from threading import Thread
 
+import colorama
 import usb.core
 import usb.util
 from tqdm import tqdm
-
-from colorama import Back, Fore, Style
 
 from kitools import kiserial
 from kitools import kidfu
@@ -37,11 +36,12 @@ if platform.system() in 'Windows':
 
 KIRALE_VID = 0x2def
 
+
 def try_input(txt=None):
     '''Normal input but catching the keyboard interruption'''
     sys.stdout.write(
-        '%s%s%s%s%s ' % (Style.BRIGHT, Back.BLUE, Fore.WHITE, txt,
-                         Style.RESET_ALL))
+        '%s%s%s%s%s ' % (colorama.Style.BRIGHT, colorama.Back.BLUE,
+                         colorama.Fore.WHITE, txt, colorama.Style.RESET_ALL))
     try:
         if sys.version_info > (3, 0):
             typed = input().strip()
@@ -54,12 +54,12 @@ def try_input(txt=None):
 
 def colorize(msg, color):
     '''Return the message colorized'''
-    return '%s%s%s' % (color, msg, Fore.RESET)
+    return '%s%s%s' % (color, msg, colorama.Fore.RESET)
 
 
 def sys_exit(msg):
     '''Exit with a red message'''
-    sys.exit(colorize(msg, Fore.RED))
+    sys.exit(colorize(msg, colorama.Fore.RED))
 
 
 def get_usb_devices():
@@ -81,7 +81,7 @@ def get_dfu_devices():
         # Initialize DFU devices
         try:
             dfus.append(kidfu.KiDfuDevice(dev))
-        except: # usb.core.USBError, NotImplementedError:
+        except:  # usb.core.USBError, NotImplementedError:
             pass
 
     return dfus
@@ -105,8 +105,8 @@ def dfu_find_and_flash(dfu_file):
     # Detach KiNOS running devices
     run_dfus = [dfu for dfu in dfus if not dfu.is_boot()]
     if run_dfus:
-        print('\nThe following %d run-time devices where found:' %
-               len(run_dfus))
+        print(
+            '\nThe following %d run-time devices where found:' % len(run_dfus))
         for dfu in run_dfus:
             print(dfu)
         try_input('Press Enter to detach them all.')
@@ -119,16 +119,16 @@ def dfu_find_and_flash(dfu_file):
                     pass
             usb.util.dispose_resources(dfu.dev)
         # Wait until all devices are detached
-        sleep(2 + 0.1*num_dfus)
-        
+        sleep(2 + 0.1 * num_dfus)
+
     # Flash DFU mode devices
     dfus = [dfu for dfu in get_dfu_devices() if dfu.is_boot()]
     if len(dfus) < num_dfus:
-        sys_exit('Expecting at least %d DFU devices, found %d.' %
-                 (num_dfus, len(dfus)))
+        sys_exit('Expecting at least %d DFU devices, found %d.' % (num_dfus,
+                                                                   len(dfus)))
     if not dfus:
         sys_exit('No Kirale DFU devices found.')
-        
+
     print('\nThe following %d DFU devices were found:' % len(dfus))
     for dfu in dfus:
         print(dfu)
@@ -138,8 +138,9 @@ def dfu_find_and_flash(dfu_file):
         usb.util.dispose_resources(dfu.dev)
 
     # Wait until all devices are in runtime
-    print('\nPlease wait for all the devices to return to run-time mode...',
-          end='')
+    print(
+        '\nPlease wait for all the devices to return to run-time mode...',
+        end='')
     for _ in repeat(None, 12):
         sleep(1)
         print('.', end='')
@@ -147,7 +148,7 @@ def dfu_find_and_flash(dfu_file):
             print('')
             return
     sys_exit('\nSome of the devices were not properly flashed.')
-    
+
 
 def dfu_flash(dfu, dfu_file, queue, pos=0):
     '''Flash a list of DFU devices with the given file'''
@@ -160,14 +161,14 @@ def dfu_flash(dfu, dfu_file, queue, pos=0):
         dfu_file.data[i:i + 64] for i in range(0, len(dfu_file.data), 64)
     ]
     for bnum, block in enumerate(
-        tqdm(
-            blocks,
-            unit='block',
-            miniters=1,
-            desc=colorize(snum, Fore.CYAN),
-            position=pos,
-            dynamic_ncols=True,
-            leave=True)):
+            tqdm(
+                blocks,
+                unit='block',
+                miniters=1,
+                desc=colorize(snum, colorama.Fore.CYAN),
+                position=pos,
+                dynamic_ncols=True,
+                leave=True)):
         try:
             dfu.write(bnum, block)
             status = dfu.wait_while_state(kidfu.DfuState.DFU_DOWNLOAD_BUSY)
@@ -216,7 +217,7 @@ def kbi_flash(kidev, dfu_file, queue, pos=0):
                     blocks,
                     unit='block',
                     miniters=1,
-                    desc=colorize(kidev.snum, Fore.CYAN),
+                    desc=colorize(kidev.snum, colorama.Fore.CYAN),
                     position=pos,
                     dynamic_ncols=True,
                     leave=True)):
@@ -270,13 +271,13 @@ def parallel_program(flash_func, devices, dfu_file):
     for thread in threads:
         thread.join()
         results.append(queue.get())
-    print('\n'*len(devices))
+    print('\n' * len(devices))
     print(
         colorize(
             'Elapsed: %s' % strftime("%M m %S s", localtime(time() - start)),
-            Fore.YELLOW))
+            colorama.Fore.YELLOW))
     for result in results:
         print('\t' + result)
-    print('Flashed %s of %d devices.' %
-          (colorize(len([r for r in results if 'OK' in r]), Fore.GREEN),
-           len(results)))
+    print('Flashed %s of %d devices.' % (colorize(
+        len([r for r in results if 'OK' in r]), colorama.Fore.GREEN),
+                                         len(results)))

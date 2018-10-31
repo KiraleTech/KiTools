@@ -8,13 +8,8 @@ import sys
 from threading import Thread
 from time import sleep
 
-from colorama import init as colorama_init
-from colorama import Fore, Style
-
-from kitools import kidfu
-from kitools import kifwu
-from kitools import kiserial
-from kitools import kisniffer
+import colorama
+from kitools import kidfu, kifwu, kiserial, kisniffer
 
 if platform.system() in 'Windows':
     WS_PATH = 'C:\\Program Files (x86)\\Wireshark\\Wireshark-gtk.exe'
@@ -36,7 +31,8 @@ def _get_device():
     if kirale_devs:
         print('\rAvailable Kirale devices:')
         for num, dev in enumerate(kirale_devs):
-            print('%s%d%s:  %s' % (Fore.GREEN, num + 1, Fore.RESET, dev))
+            print('%s%d%s:  %s' % (colorama.Fore.GREEN, num + 1,
+                                   colorama.Fore.RESET, dev))
         # Don't ask the user if there is only one option
         if len(kirale_devs) == 1:
             return kirale_devs[0].port
@@ -66,19 +62,21 @@ def check_port(device):
     Finish when disconnection is detected'''
     while device.is_active():
         sleep(0.1)
-    print('\n%sConnection with the port was lost.%s' % (Fore.RED, Fore.RESET))
+    print('\n%sConnection with the port was lost.%s' % (colorama.Fore.RED,
+                                                        colorama.Fore.RESET))
 
 
 def port_loop(device):
     '''Terminal simulation.'''
     while True:
-        command = kifwu.try_input('%s@%s>' % (
-            device.mode, device.name.split('/')[-1]))
+        command = kifwu.try_input(
+            '%s@%s>' % (device.mode, device.name.split('/')[-1]))
         if command:
             response = device.ksh_cmd(command)
             if response:
                 for line in response:
-                    sys.stdout.write('%s%s\n' % (Fore.CYAN, line.rstrip('\n')))
+                    sys.stdout.write(
+                        '%s%s\n' % (colorama.Fore.CYAN, line.rstrip('\n')))
             if 'reset' in command:
                 del device
                 return
@@ -116,7 +114,8 @@ def main():
         required=False,
         type=str,
         default=None,
-        help='sniffer capture output file OR Wireshark path when used with --live')
+        help=
+        'sniffer capture output file OR Wireshark path when used with --live')
     parser.add_argument(
         '--debug',
         required=False,
@@ -129,21 +128,24 @@ def main():
         required=False,
         type=lambda x: kidfu.DfuFile(x),
         default=None,
-        help='provide a DFU file to flash all the connected Kirale devices using DFU protocol'
+        help=
+        'provide a DFU file to flash all the connected Kirale devices using DFU protocol'
     )
     parser.add_argument(
         '--flashkbi',
         required=False,
         type=lambda x: kidfu.DfuFile(x),
         default=None,
-        help='provide a DFU file to flash all the connected Kirale devices using KBI protocol'
+        help=
+        'provide a DFU file to flash all the connected Kirale devices using KBI protocol'
     )
     args = parser.parse_args()
 
     # Print logo
-    #colorama_init(autoreset=True, convert=True)
-    colorama_init()
-    print(Fore.BLUE + Style.BRIGHT + LOGO + Style.RESET_ALL)
+    colorama.deinit()
+    colorama.init()
+    print(colorama.Fore.BLUE + colorama.Style.BRIGHT + LOGO +
+          colorama.Style.RESET_ALL)
 
     # Flash DFU file if provided
     if args.flashdfu:

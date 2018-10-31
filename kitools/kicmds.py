@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # -*- coding: latin-1 -*-
-
 '''KBI adaptation layer for kiserial'''
 
 import shlex
@@ -9,8 +8,8 @@ from functools import reduce
 from operator import xor
 from time import gmtime, strftime
 
+import colorama
 from iptools import ipv6
-from colorama import Fore
 
 # Command types
 CT_CMD = 0x40
@@ -129,115 +128,522 @@ def s2b(type_, str_, size=0):
 
 
 TEXT2CLI = {
-    'clear': {'type': CT_CMD, 'code': 0x00 | OP_EXEC},
-    'show uptime': {'type': CT_CMD, 'code': 0x02 | OP_READ},
-    'reset': {'type': CT_CMD, 'code': 0x03 | OP_EXEC},
-    'config autojoin on': {'type': CT_CMD, 'code': 0x04 | OP_WRITE},
-    'config autojoin off': {'type': CT_CMD, 'code': 0x04 | OP_DEL},
-    'show autojoin': {'type': CT_CMD, 'code': 0x04 | OP_READ},
-    'show status': {'type': CT_CMD, 'code': 0x05 | OP_READ},
-    'ping': {'type': CT_CMD, 'code': 0x06 | OP_EXEC, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 2)]},
-    'ifdown': {'type': CT_CMD, 'code': 0x07 | OP_EXEC},
-    'ifup': {'type': CT_CMD, 'code': 0x08 | OP_EXEC},
-    'config socket add': {'type': CT_CMD, 'code': 0x09 | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 2)], 'lastParamOptional': True},
-    'config socket del': {'type': CT_CMD, 'code': 0x09 | OP_DEL, 'params': [lambda x: s2b(TYP.DEC, x, 2)]},
-    'show swver': {'type': CT_CMD, 'code': 0x0a | OP_READ},
-    'show hwver': {'type': CT_CMD, 'code': 0x0b | OP_READ},
-    'show snum': {'type': CT_CMD, 'code': 0x0c | OP_READ},
-    'config emac': {'type': CT_CMD, 'code': 0x0d | OP_WRITE, 'params': [lambda x: s2b(TYP.MAC, x)]},
-    'show emac': {'type': CT_CMD, 'code': 0x0d | OP_READ},
-    'show eui64': {'type': CT_CMD, 'code': 0x0e | OP_READ},
-    'config lowpower on': {'type': CT_CMD, 'code': 0x0f | OP_WRITE},
-    'config lowpower off': {'type': CT_CMD, 'code': 0x0f | OP_DEL},
-    'show lowpower': {'type': CT_CMD, 'code': 0x0f | OP_READ},
-    'config txpower': {'type': CT_CMD, 'code': 0x10 | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 1)]},
-    'show txpower': {'type': CT_CMD, 'code': 0x10 | OP_READ},
-    'config panid': {'type': CT_CMD, 'code': 0x11 | OP_WRITE, 'params': [lambda x: s2b(TYP.HEX, x)]},
-    'show panid': {'type': CT_CMD, 'code': 0x11 | OP_READ},
-    'config channel': {'type': CT_CMD, 'code': 0x12 | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 1)]},
-    'show channel': {'type': CT_CMD, 'code': 0x12 | OP_READ},
-    'config xpanid': {'type': CT_CMD, 'code': 0x13 | OP_WRITE, 'params': [lambda x: s2b(TYP.HEX, x)]},
+    'clear': {
+        'type': CT_CMD,
+        'code': 0x00 | OP_EXEC
+    },
+    'show uptime': {
+        'type': CT_CMD,
+        'code': 0x02 | OP_READ
+    },
+    'reset': {
+        'type': CT_CMD,
+        'code': 0x03 | OP_EXEC
+    },
+    'config autojoin on': {
+        'type': CT_CMD,
+        'code': 0x04 | OP_WRITE
+    },
+    'config autojoin off': {
+        'type': CT_CMD,
+        'code': 0x04 | OP_DEL
+    },
+    'show autojoin': {
+        'type': CT_CMD,
+        'code': 0x04 | OP_READ
+    },
+    'show status': {
+        'type': CT_CMD,
+        'code': 0x05 | OP_READ
+    },
+    'ping': {
+        'type': CT_CMD,
+        'code': 0x06 | OP_EXEC,
+        'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 2)]
+    },
+    'ifdown': {
+        'type': CT_CMD,
+        'code': 0x07 | OP_EXEC
+    },
+    'ifup': {
+        'type': CT_CMD,
+        'code': 0x08 | OP_EXEC
+    },
+    'config socket add': {
+        'type': CT_CMD,
+        'code': 0x09 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 2)],
+        'lastParamOptional': True
+    },
+    'config socket del': {
+        'type': CT_CMD,
+        'code': 0x09 | OP_DEL,
+        'params': [lambda x: s2b(TYP.DEC, x, 2)]
+    },
+    'show swver': {
+        'type': CT_CMD,
+        'code': 0x0a | OP_READ
+    },
+    'show hwver': {
+        'type': CT_CMD,
+        'code': 0x0b | OP_READ
+    },
+    'show snum': {
+        'type': CT_CMD,
+        'code': 0x0c | OP_READ
+    },
+    'config emac': {
+        'type': CT_CMD,
+        'code': 0x0d | OP_WRITE,
+        'params': [lambda x: s2b(TYP.MAC, x)]
+    },
+    'show emac': {
+        'type': CT_CMD,
+        'code': 0x0d | OP_READ
+    },
+    'show eui64': {
+        'type': CT_CMD,
+        'code': 0x0e | OP_READ
+    },
+    'config lowpower on': {
+        'type': CT_CMD,
+        'code': 0x0f | OP_WRITE
+    },
+    'config lowpower off': {
+        'type': CT_CMD,
+        'code': 0x0f | OP_DEL
+    },
+    'show lowpower': {
+        'type': CT_CMD,
+        'code': 0x0f | OP_READ
+    },
+    'config txpower': {
+        'type': CT_CMD,
+        'code': 0x10 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 1)]
+    },
+    'show txpower': {
+        'type': CT_CMD,
+        'code': 0x10 | OP_READ
+    },
+    'config panid': {
+        'type': CT_CMD,
+        'code': 0x11 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.HEX, x)]
+    },
+    'show panid': {
+        'type': CT_CMD,
+        'code': 0x11 | OP_READ
+    },
+    'config channel': {
+        'type': CT_CMD,
+        'code': 0x12 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 1)]
+    },
+    'show channel': {
+        'type': CT_CMD,
+        'code': 0x12 | OP_READ
+    },
+    'config xpanid': {
+        'type': CT_CMD,
+        'code': 0x13 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.HEX, x)]
+    },
     # Moved here for sequential seek
-    'show xpanfilt': {'type': CT_CMD, 'code': 0x1f | OP_READ},
-    'show xpanid': {'type': CT_CMD, 'code': 0x13 | OP_READ},
-    'config netname': {'type': CT_CMD, 'code': 0x14 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
-    'show netname': {'type': CT_CMD, 'code': 0x14 | OP_READ},
-    'config mkey': {'type': CT_CMD, 'code': 0x15 | OP_WRITE, 'params': [lambda x: s2b(TYP.HEX, x)]},
-    'show mkey': {'type': CT_CMD, 'code': 0x15 | OP_READ},
-    'config commcred': {'type': CT_CMD, 'code': 0x16 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
-    'show commcred': {'type': CT_CMD, 'code': 0x16 | OP_READ},
-    'config joincred': {'type': CT_CMD, 'code': 0x17 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
-    'show joincred': {'type': CT_CMD, 'code': 0x17 | OP_READ},
-    'config joiner add': {'type': CT_CMD, 'code': 0x18 | OP_WRITE, 'params': [lambda x: s2b(TYP.MAC, x), lambda x: s2b(TYP.STR, x)]},
-    'config joiner remove all': {'type': CT_CMD, 'code': 0x18 | OP_DEL},
-    'config joiner remove': {'type': CT_CMD, 'code': 0x18 | OP_DEL, 'params': [lambda x: s2b(TYP.MAC, x)]},
-    'show joiners': {'type': CT_CMD, 'code': 0x18 | OP_READ},
-    'config role': {'type': CT_CMD, 'code': 0x19 | OP_WRITE, 'params': [lambda x: s2b(TYP.ROLE, x)]},
-    'show role': {'type': CT_CMD, 'code': 0x19 | OP_READ},
-    'show rloc16': {'type': CT_CMD, 'code': 0x1a | OP_READ},
-    'config comm on': {'type': CT_CMD, 'code': 0x1b | OP_WRITE},
-    'config comm off': {'type': CT_CMD, 'code': 0x1b | OP_DEL},
-    'config mlprefix': {'type': CT_CMD, 'code': 0x1c | OP_WRITE, 'params': [lambda x: s2b(TYP.ADDR, x)[:8]]},
-    'show mlprefix': {'type': CT_CMD, 'code': 0x1c | OP_READ},
-    'config maxchild': {'type': CT_CMD, 'code': 0x1d | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 1)]},
-    'show maxchild': {'type': CT_CMD, 'code': 0x1d | OP_READ},
-    'config timeout': {'type': CT_CMD, 'code': 0x1e | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 4)]},
-    'show timeout': {'type': CT_CMD, 'code': 0x1e | OP_READ},
-    'config xpanfilt add': {'type': CT_CMD, 'code': 0x1f | OP_WRITE, 'params': [lambda x: s2b(TYP.HEX, x)]},
-    'config xpanfilt remove all': {'type': CT_CMD, 'code': 0x1f | OP_DEL},
-    'config ipaddr add': {'type': CT_CMD, 'code': 0x20 | OP_WRITE, 'params': [lambda x: s2b(TYP.ADDR, x)]},
-    'config ipaddr remove': {'type': CT_CMD, 'code': 0x20 | OP_DEL, 'params': [lambda x: s2b(TYP.ADDR, x)]},
-    'show ipaddr': {'type': CT_CMD, 'code': 0x20 | OP_READ},
-    'config joinport': {'type': CT_CMD, 'code': 0x21 | OP_WRITE, 'params': [lambda x: s2b(TYP.HEX, x)]},
-    'show heui64': {'type': CT_CMD, 'code': 0x22 | OP_READ},
-    'config pollrate': {'type': CT_CMD, 'code': 0x23 | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 4)]},
-    'show pollrate': {'type': CT_CMD, 'code': 0x23 | OP_READ},
-    'config outband': {'type': CT_CMD, 'code': 0x24 | OP_WRITE},
-    'config steering': {'type': CT_CMD, 'code': 0x25 | OP_WRITE, 'params': [lambda x: s2b(TYP.STDATA, x)]},
-    'config prefix add': {'type': CT_CMD, 'code': 0x26 | OP_WRITE, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1), lambda x: s2b(TYP.HEX, x)]},
-    'config prefix remove': {'type': CT_CMD, 'code': 0x26 | OP_DEL, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1)]},
-    'config route add': {'type': CT_CMD, 'code': 0x27 | OP_WRITE, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1), lambda x: s2b(TYP.HEX, x)]},
-    'config route remove': {'type': CT_CMD, 'code': 0x27 | OP_DEL, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1)]},
-    'show parent': {'type': CT_CMD, 'code': 0x28 | OP_READ},
-    'show routert': {'type': CT_CMD, 'code': 0x29 | OP_READ},
-    'show ldrdata': {'type': CT_CMD, 'code': 0x2a | OP_READ},
-    'show netdata': {'type': CT_CMD, 'code': 0x2b | OP_READ},
-    'show stats': {'type': CT_CMD, 'code': 0x2c | OP_READ},
-    'show childt': {'type': CT_CMD, 'code': 0x2d | OP_READ},
-    'netcat': {'type': CT_CMD, 'code': 0x2e | OP_EXEC, 'params': [lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, x)]},
-    'config hwmode': {'type': CT_CMD, 'code': 0x30 | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 1)]},
-    'show hwmode': {'type': CT_CMD, 'code': 0x30 | OP_READ},
-    'config led on': {'type': CT_CMD, 'code': 0x31 | OP_WRITE},
-    'config led off': {'type': CT_CMD, 'code': 0x31 | OP_DEL},
-    'show led': {'type': CT_CMD, 'code': 0x31 | OP_READ},
-    'config vname': {'type': CT_CMD, 'code': 0x32 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
-    'show vname': {'type': CT_CMD, 'code': 0x32 | OP_READ},
-    'config vmodel': {'type': CT_CMD, 'code': 0x33 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
-    'show vmodel': {'type': CT_CMD, 'code': 0x33 | OP_READ},
-    'config vdata': {'type': CT_CMD, 'code': 0x34 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
-    'show vdata': {'type': CT_CMD, 'code': 0x34 | OP_READ},
-    'config vswver': {'type': CT_CMD, 'code': 0x35 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
-    'show vswver': {'type': CT_CMD, 'code': 0x35 | OP_READ},
-    'config actstamp': {'type': CT_CMD, 'code': 0x36 | OP_WRITE, 'params': [lambda x: s2b(TYP.HEX, x)]},
-    'show actstamp': {'type': CT_CMD, 'code': 0x36 | OP_READ, 'params': [lambda x: s2b(TYP.HEX, x)]},
-    'nping': {'type': CT_CMD, 'code': 0x37 | OP_EXEC, 'params': [lambda x: s2b(TYP.STRN, x, 31), lambda x: s2b(TYP.DEC, x, 2)]},
-    'nnetcat': {'type': CT_CMD, 'code': 0x38 | OP_EXEC, 'params': [lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.STRN, x, 31), lambda x: s2b(TYP.HEX, x)]},
-    'show services': {'type': CT_CMD, 'code': 0x39 | OP_READ},
+    'show xpanfilt': {
+        'type': CT_CMD,
+        'code': 0x1f | OP_READ
+    },
+    'show xpanid': {
+        'type': CT_CMD,
+        'code': 0x13 | OP_READ
+    },
+    'config netname': {
+        'type': CT_CMD,
+        'code': 0x14 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.STR, x)]
+    },
+    'show netname': {
+        'type': CT_CMD,
+        'code': 0x14 | OP_READ
+    },
+    'config mkey': {
+        'type': CT_CMD,
+        'code': 0x15 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.HEX, x)]
+    },
+    'show mkey': {
+        'type': CT_CMD,
+        'code': 0x15 | OP_READ
+    },
+    'config commcred': {
+        'type': CT_CMD,
+        'code': 0x16 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.STR, x)]
+    },
+    'show commcred': {
+        'type': CT_CMD,
+        'code': 0x16 | OP_READ
+    },
+    'config joincred': {
+        'type': CT_CMD,
+        'code': 0x17 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.STR, x)]
+    },
+    'show joincred': {
+        'type': CT_CMD,
+        'code': 0x17 | OP_READ
+    },
+    'config joiner add': {
+        'type': CT_CMD,
+        'code': 0x18 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.MAC, x), lambda x: s2b(TYP.STR, x)]
+    },
+    'config joiner remove all': {
+        'type': CT_CMD,
+        'code': 0x18 | OP_DEL
+    },
+    'config joiner remove': {
+        'type': CT_CMD,
+        'code': 0x18 | OP_DEL,
+        'params': [lambda x: s2b(TYP.MAC, x)]
+    },
+    'show joiners': {
+        'type': CT_CMD,
+        'code': 0x18 | OP_READ
+    },
+    'config role': {
+        'type': CT_CMD,
+        'code': 0x19 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.ROLE, x)]
+    },
+    'show role': {
+        'type': CT_CMD,
+        'code': 0x19 | OP_READ
+    },
+    'show rloc16': {
+        'type': CT_CMD,
+        'code': 0x1a | OP_READ
+    },
+    'config comm on': {
+        'type': CT_CMD,
+        'code': 0x1b | OP_WRITE
+    },
+    'config comm off': {
+        'type': CT_CMD,
+        'code': 0x1b | OP_DEL
+    },
+    'config mlprefix': {
+        'type': CT_CMD,
+        'code': 0x1c | OP_WRITE,
+        'params': [lambda x: s2b(TYP.ADDR, x)[:8]]
+    },
+    'show mlprefix': {
+        'type': CT_CMD,
+        'code': 0x1c | OP_READ
+    },
+    'config maxchild': {
+        'type': CT_CMD,
+        'code': 0x1d | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 1)]
+    },
+    'show maxchild': {
+        'type': CT_CMD,
+        'code': 0x1d | OP_READ
+    },
+    'config timeout': {
+        'type': CT_CMD,
+        'code': 0x1e | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 4)]
+    },
+    'show timeout': {
+        'type': CT_CMD,
+        'code': 0x1e | OP_READ
+    },
+    'config xpanfilt add': {
+        'type': CT_CMD,
+        'code': 0x1f | OP_WRITE,
+        'params': [lambda x: s2b(TYP.HEX, x)]
+    },
+    'config xpanfilt remove all': {
+        'type': CT_CMD,
+        'code': 0x1f | OP_DEL
+    },
+    'config ipaddr add': {
+        'type': CT_CMD,
+        'code': 0x20 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.ADDR, x)]
+    },
+    'config ipaddr remove': {
+        'type': CT_CMD,
+        'code': 0x20 | OP_DEL,
+        'params': [lambda x: s2b(TYP.ADDR, x)]
+    },
+    'show ipaddr': {
+        'type': CT_CMD,
+        'code': 0x20 | OP_READ
+    },
+    'config joinport': {
+        'type': CT_CMD,
+        'code': 0x21 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.HEX, x)]
+    },
+    'show heui64': {
+        'type': CT_CMD,
+        'code': 0x22 | OP_READ
+    },
+    'config pollrate': {
+        'type': CT_CMD,
+        'code': 0x23 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 4)]
+    },
+    'show pollrate': {
+        'type': CT_CMD,
+        'code': 0x23 | OP_READ
+    },
+    'config outband': {
+        'type': CT_CMD,
+        'code': 0x24 | OP_WRITE
+    },
+    'config steering': {
+        'type': CT_CMD,
+        'code': 0x25 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.STDATA, x)]
+    },
+    'config prefix add': {
+        'type':
+        CT_CMD,
+        'code':
+        0x26 | OP_WRITE,
+        'params': [
+            lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1),
+            lambda x: s2b(TYP.HEX, x)
+        ]
+    },
+    'config prefix remove': {
+        'type': CT_CMD,
+        'code': 0x26 | OP_DEL,
+        'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1)]
+    },
+    'config route add': {
+        'type':
+        CT_CMD,
+        'code':
+        0x27 | OP_WRITE,
+        'params': [
+            lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1),
+            lambda x: s2b(TYP.HEX, x)
+        ]
+    },
+    'config route remove': {
+        'type': CT_CMD,
+        'code': 0x27 | OP_DEL,
+        'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1)]
+    },
+    'show parent': {
+        'type': CT_CMD,
+        'code': 0x28 | OP_READ
+    },
+    'show routert': {
+        'type': CT_CMD,
+        'code': 0x29 | OP_READ
+    },
+    'show ldrdata': {
+        'type': CT_CMD,
+        'code': 0x2a | OP_READ
+    },
+    'show netdata': {
+        'type': CT_CMD,
+        'code': 0x2b | OP_READ
+    },
+    'show stats': {
+        'type': CT_CMD,
+        'code': 0x2c | OP_READ
+    },
+    'show childt': {
+        'type': CT_CMD,
+        'code': 0x2d | OP_READ
+    },
+    'netcat': {
+        'type':
+        CT_CMD,
+        'code':
+        0x2e | OP_EXEC,
+        'params': [
+            lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.DEC, x, 2),
+            lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, x)
+        ]
+    },
+    'config hwmode': {
+        'type': CT_CMD,
+        'code': 0x30 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 1)]
+    },
+    'show hwmode': {
+        'type': CT_CMD,
+        'code': 0x30 | OP_READ
+    },
+    'config led on': {
+        'type': CT_CMD,
+        'code': 0x31 | OP_WRITE
+    },
+    'config led off': {
+        'type': CT_CMD,
+        'code': 0x31 | OP_DEL
+    },
+    'show led': {
+        'type': CT_CMD,
+        'code': 0x31 | OP_READ
+    },
+    'config vname': {
+        'type': CT_CMD,
+        'code': 0x32 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.STR, x)]
+    },
+    'show vname': {
+        'type': CT_CMD,
+        'code': 0x32 | OP_READ
+    },
+    'config vmodel': {
+        'type': CT_CMD,
+        'code': 0x33 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.STR, x)]
+    },
+    'show vmodel': {
+        'type': CT_CMD,
+        'code': 0x33 | OP_READ
+    },
+    'config vdata': {
+        'type': CT_CMD,
+        'code': 0x34 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.STR, x)]
+    },
+    'show vdata': {
+        'type': CT_CMD,
+        'code': 0x34 | OP_READ
+    },
+    'config vswver': {
+        'type': CT_CMD,
+        'code': 0x35 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.STR, x)]
+    },
+    'show vswver': {
+        'type': CT_CMD,
+        'code': 0x35 | OP_READ
+    },
+    'config actstamp': {
+        'type': CT_CMD,
+        'code': 0x36 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.HEX, x)]
+    },
+    'show actstamp': {
+        'type': CT_CMD,
+        'code': 0x36 | OP_READ,
+        'params': [lambda x: s2b(TYP.HEX, x)]
+    },
+    'nping': {
+        'type': CT_CMD,
+        'code': 0x37 | OP_EXEC,
+        'params':
+        [lambda x: s2b(TYP.STRN, x, 31), lambda x: s2b(TYP.DEC, x, 2)]
+    },
+    'nnetcat': {
+        'type':
+        CT_CMD,
+        'code':
+        0x38 | OP_EXEC,
+        'params': [
+            lambda x: s2b(TYP.DEC, x, 2), lambda x: s2b(TYP.DEC, x, 2),
+            lambda x: s2b(TYP.STRN, x, 31), lambda x: s2b(TYP.HEX, x)
+        ]
+    },
+    'show services': {
+        'type': CT_CMD,
+        'code': 0x39 | OP_READ
+    },
     # Test Harness Specific Commands
-    'config provurl': {'type': CT_GOL, 'code': 0x00 | OP_WRITE, 'params': [lambda x: s2b(TYP.STR, x)]},
-    'show commsid': {'type': CT_GOL, 'code': 0x01 | OP_READ},
-    'config sjitter': {'type': CT_GOL, 'code': 0x05 | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 1)]},
-    'config seqctr': {'type': CT_GOL, 'code': 0x0b | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 4)]},
-    'show seqctr': {'type': CT_GOL, 'code': 0x0b | OP_READ},
-    'config seqguard': {'type': CT_GOL, 'code': 0x0c | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 4)]},
-    'exec activeget': {'type': CT_GOL, 'code': 0x11 | OP_EXEC, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)], 'lastParamOptional': True},
-    'exec activeset': {'type': CT_GOL, 'code': 0x12 | OP_EXEC, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)]},
-    'exec commget': {'type': CT_GOL, 'code': 0x13 | OP_EXEC, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)], 'lastParamOptional': True},
-    'exec commset': {'type': CT_GOL, 'code': 0x14 | OP_EXEC, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)]},
-    'exec pendget': {'type': CT_GOL, 'code': 0x0f | OP_EXEC, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)], 'lastParamOptional': True},
-    'exec pendset': {'type': CT_GOL, 'code': 0x10 | OP_EXEC, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)]},
-    'exec panidqry': {'type': CT_GOL, 'code': 0x19 | OP_EXEC, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, x), lambda x: s2b(TYP.HEX, x)]},
-    'config rotation': {'type': CT_GOL, 'code': 0x23 | OP_WRITE, 'params': [lambda x: s2b(TYP.DEC, x, 2)]}
+    'config provurl': {
+        'type': CT_GOL,
+        'code': 0x00 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.STR, x)]
+    },
+    'show commsid': {
+        'type': CT_GOL,
+        'code': 0x01 | OP_READ
+    },
+    'config sjitter': {
+        'type': CT_GOL,
+        'code': 0x05 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 1)]
+    },
+    'config seqctr': {
+        'type': CT_GOL,
+        'code': 0x0b | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 4)]
+    },
+    'show seqctr': {
+        'type': CT_GOL,
+        'code': 0x0b | OP_READ
+    },
+    'config seqguard': {
+        'type': CT_GOL,
+        'code': 0x0c | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 4)]
+    },
+    'exec activeget': {
+        'type': CT_GOL,
+        'code': 0x11 | OP_EXEC,
+        'params':
+        [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)],
+        'lastParamOptional': True
+    },
+    'exec activeset': {
+        'type': CT_GOL,
+        'code': 0x12 | OP_EXEC,
+        'params':
+        [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)]
+    },
+    'exec commget': {
+        'type': CT_GOL,
+        'code': 0x13 | OP_EXEC,
+        'params':
+        [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)],
+        'lastParamOptional': True
+    },
+    'exec commset': {
+        'type': CT_GOL,
+        'code': 0x14 | OP_EXEC,
+        'params':
+        [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)]
+    },
+    'exec pendget': {
+        'type': CT_GOL,
+        'code': 0x0f | OP_EXEC,
+        'params':
+        [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)],
+        'lastParamOptional': True
+    },
+    'exec pendset': {
+        'type': CT_GOL,
+        'code': 0x10 | OP_EXEC,
+        'params':
+        [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, '0x' + x)]
+    },
+    'exec panidqry': {
+        'type':
+        CT_GOL,
+        'code':
+        0x19 | OP_EXEC,
+        'params': [
+            lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, x),
+            lambda x: s2b(TYP.HEX, x)
+        ]
+    },
+    'config rotation': {
+        'type': CT_GOL,
+        'code': 0x23 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 2)]
+    }
 }
 
 
@@ -341,50 +747,101 @@ def b2s(type_, bytes_, size=None):
 
 
 CLI2TEXT = {
-    (CT_RSC | RC_VALUE, 0x02 | OP_READ): ['uptime', lambda x: b2s(TYP.TIME, x)],
-    (CT_RSC | RC_VALUE, 0x04 | OP_READ): ['autojoin', lambda x: b2s(TYP.DEC, x)],
-    (CT_RSC | RC_VALUE, 0x05 | OP_READ): ['status', lambda x: b2s(TYP.STATUS, x)],
-    (CT_RSC | RC_VALUE, 0x09 | OP_WRITE): ['socket', lambda x: b2s(TYP.DEC, x)],
+    (CT_RSC | RC_VALUE, 0x02 | OP_READ):
+    ['uptime', lambda x: b2s(TYP.TIME, x)],
+    (CT_RSC | RC_VALUE, 0x04 | OP_READ):
+    ['autojoin', lambda x: b2s(TYP.DEC, x)],
+    (CT_RSC | RC_VALUE, 0x05 | OP_READ):
+    ['status', lambda x: b2s(TYP.STATUS, x)],
+    (CT_RSC | RC_VALUE, 0x09 | OP_WRITE): [
+        'socket', lambda x: b2s(TYP.DEC, x)
+    ],
     (CT_RSC | RC_VALUE, 0x11 | OP_READ): ['panid', lambda x: b2s(TYP.HEX, x)],
     (CT_RSC | RC_VALUE, 0x0a | OP_READ): ['swver', lambda x: b2s(TYP.CHAR, x)],
     (CT_RSC | RC_VALUE, 0x0b | OP_READ): ['hwver', lambda x: b2s(TYP.CHAR, x)],
     (CT_RSC | RC_VALUE, 0x0c | OP_READ): ['snum', lambda x: b2s(TYP.CHAR, x)],
     (CT_RSC | RC_VALUE, 0x0d | OP_READ): ['emac', lambda x: b2s(TYP.MAC, x)],
     (CT_RSC | RC_VALUE, 0x0e | OP_READ): ['eui64', lambda x: b2s(TYP.MAC, x)],
-    (CT_RSC | RC_VALUE, 0x0F | OP_READ): ['lowpower', lambda x: b2s(TYP.DEC, x)],
-    (CT_RSC | RC_VALUE, 0x10 | OP_READ): ['txpower', lambda x: b2s(TYP.DEC, x)],
-    (CT_RSC | RC_VALUE, 0x12 | OP_READ): ['channel', lambda x: b2s(TYP.DEC, x)],
+    (CT_RSC | RC_VALUE, 0x0F | OP_READ): [
+        'lowpower', lambda x: b2s(TYP.DEC, x)
+    ],
+    (CT_RSC | RC_VALUE, 0x10 | OP_READ): [
+        'txpower', lambda x: b2s(TYP.DEC, x)
+    ],
+    (CT_RSC | RC_VALUE, 0x12 | OP_READ): [
+        'channel', lambda x: b2s(TYP.DEC, x)
+    ],
     (CT_RSC | RC_VALUE, 0x13 | OP_READ): ['xpanid', lambda x: b2s(TYP.HEX, x)],
-    (CT_RSC | RC_VALUE, 0x14 | OP_READ): ['netname', lambda x: b2s(TYP.CHAR, x)],
+    (CT_RSC | RC_VALUE, 0x14 | OP_READ): [
+        'netname', lambda x: b2s(TYP.CHAR, x)
+    ],
     (CT_RSC | RC_VALUE, 0x15 | OP_READ): ['mkey', lambda x: b2s(TYP.HEX, x)],
-    (CT_RSC | RC_VALUE, 0x16 | OP_READ): ['commcred', lambda x: b2s(TYP.CHAR, x)],
-    (CT_RSC | RC_VALUE, 0x17 | OP_READ): ['joincred', lambda x: b2s(TYP.CHAR, x)],
+    (CT_RSC | RC_VALUE, 0x16 | OP_READ): [
+        'commcred', lambda x: b2s(TYP.CHAR, x)
+    ],
+    (CT_RSC | RC_VALUE, 0x17 | OP_READ): [
+        'joincred', lambda x: b2s(TYP.CHAR, x)
+    ],
     (CT_RSC | RC_VALUE, 0x18 | OP_READ): ['joiner', lambda x: b2s(TYP.MAC, x)],
     (CT_RSC | RC_VALUE, 0x19 | OP_READ): ['role', lambda x: b2s(TYP.ROLE, x)],
     (CT_RSC | RC_VALUE, 0x1a | OP_READ): ['rloc16', lambda x: b2s(TYP.HEX, x)],
-    (CT_RSC | RC_VALUE, 0x1c | OP_READ): ['mlprefix', lambda x: b2s(TYP.ADDR, x, 8)],
-    (CT_RSC | RC_VALUE, 0x1d | OP_READ): ['maxchild', lambda x: b2s(TYP.DEC, x)],
-    (CT_RSC | RC_VALUE, 0x1e | OP_READ): ['timeout', lambda x: b2s(TYP.DEC, x)],
-    (CT_RSC | RC_VALUE, 0x1f | OP_READ): ['xpanfilt', lambda x: b2s(TYP.HEX, x)],
-    (CT_RSC | RC_VALUE, 0x20 | OP_READ): ['ipaddr', lambda x: b2s(TYP.ADDR, x, 16)],
+    (CT_RSC | RC_VALUE, 0x1c | OP_READ): [
+        'mlprefix', lambda x: b2s(TYP.ADDR, x, 8)
+    ],
+    (CT_RSC | RC_VALUE, 0x1d | OP_READ): [
+        'maxchild', lambda x: b2s(TYP.DEC, x)
+    ],
+    (CT_RSC | RC_VALUE, 0x1e | OP_READ): [
+        'timeout', lambda x: b2s(TYP.DEC, x)
+    ],
+    (CT_RSC | RC_VALUE, 0x1f | OP_READ): [
+        'xpanfilt', lambda x: b2s(TYP.HEX, x)
+    ],
+    (CT_RSC | RC_VALUE, 0x20 | OP_READ): [
+        'ipaddr', lambda x: b2s(TYP.ADDR, x, 16)
+    ],
     (CT_RSC | RC_VALUE, 0x22 | OP_READ): ['heui64', lambda x: b2s(TYP.MAC, x)],
-    (CT_RSC | RC_VALUE, 0x23 | OP_READ): ['pollrate', lambda x: b2s(TYP.DEC, x)],
+    (CT_RSC | RC_VALUE, 0x23 | OP_READ): [
+        'pollrate', lambda x: b2s(TYP.DEC, x)
+    ],
     (CT_RSC | RC_VALUE, 0x28 | OP_READ): ['parent', lambda x: b2s(TYP.HEX, x)],
-    (CT_RSC | RC_VALUE, 0x29 | OP_READ): ['routert', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
-    (CT_RSC | RC_VALUE, 0x2a | OP_READ): ['ldrdata', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
-    (CT_RSC | RC_VALUE, 0x2b | OP_READ): ['netdata', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
-    (CT_RSC | RC_VALUE, 0x2c | OP_READ): ['stats', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
-    (CT_RSC | RC_VALUE, 0x2d | OP_READ): ['childt', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
+    (CT_RSC | RC_VALUE, 0x29 | OP_READ): [
+        'routert', lambda x: b2s(TYP.HEX, x).replace('0x', '')
+    ],
+    (CT_RSC | RC_VALUE, 0x2a | OP_READ): [
+        'ldrdata', lambda x: b2s(TYP.HEX, x).replace('0x', '')
+    ],
+    (CT_RSC | RC_VALUE, 0x2b | OP_READ): [
+        'netdata', lambda x: b2s(TYP.HEX, x).replace('0x', '')
+    ],
+    (CT_RSC | RC_VALUE, 0x2c | OP_READ): [
+        'stats', lambda x: b2s(TYP.HEX, x).replace('0x', '')
+    ],
+    (CT_RSC | RC_VALUE, 0x2d | OP_READ): [
+        'childt', lambda x: b2s(TYP.HEX, x).replace('0x', '')
+    ],
     (CT_RSC | RC_VALUE, 0x30 | OP_READ): ['hwmode', lambda x: b2s(TYP.DEC, x)],
     (CT_RSC | RC_VALUE, 0x31 | OP_READ): ['led', lambda x: b2s(TYP.DEC, x)],
     (CT_RSC | RC_VALUE, 0x32 | OP_READ): ['vname', lambda x: b2s(TYP.CHAR, x)],
-    (CT_RSC | RC_VALUE, 0x33 | OP_READ): ['vmodel', lambda x: b2s(TYP.CHAR, x)],
+    (CT_RSC | RC_VALUE, 0x33 | OP_READ): [
+        'vmodel', lambda x: b2s(TYP.CHAR, x)
+    ],
     (CT_RSC | RC_VALUE, 0x34 | OP_READ): ['vdata', lambda x: b2s(TYP.CHAR, x)],
-    (CT_RSC | RC_VALUE, 0x35 | OP_READ): ['vswver', lambda x: b2s(TYP.CHAR, x)],
-    (CT_RSC | RC_VALUE, 0x36 | OP_READ): ['actstamp', lambda x: b2s(TYP.HEX, x)],
-    (CT_RSC | RC_VALUE, 0x39 | OP_READ): ['services', lambda x: b2s(TYP.SERV, x)],
-    (CT_RSG | RC_VALUE, 0x01 | OP_READ): ['commsid', lambda x: b2s(TYP.HEX, x)],
-    (CT_RSG | RC_VALUE, 0x0b | OP_READ): ['kseqcounter', lambda x: b2s(TYP.DEC, x)]
+    (CT_RSC | RC_VALUE, 0x35 | OP_READ): [
+        'vswver', lambda x: b2s(TYP.CHAR, x)
+    ],
+    (CT_RSC | RC_VALUE, 0x36 | OP_READ): [
+        'actstamp', lambda x: b2s(TYP.HEX, x)
+    ],
+    (CT_RSC | RC_VALUE, 0x39 | OP_READ): [
+        'services', lambda x: b2s(TYP.SERV, x)
+    ],
+    (CT_RSG | RC_VALUE, 0x01 | OP_READ): [
+        'commsid', lambda x: b2s(TYP.HEX, x)
+    ],
+    (CT_RSG | RC_VALUE, 0x0b | OP_READ): [
+        'kseqcounter', lambda x: b2s(TYP.DEC, x)
+    ]
 }
 
 
@@ -468,32 +925,35 @@ class KBICommand:
         return self.data[5:]
 
     def to_text(self):
-        return kbi_to_text(self.get_type(), self.get_code(), self.get_payload())
+        return kbi_to_text(self.get_type(), self.get_code(),
+                           self.get_payload())
 
     def __str__(self):
         '''Print the KBI command as colored text'''
         if len(self.data) < 5:
             return '|  |'
         string = ''
-        string += ('| %s%02x%s : %s%02x%s : %s%02x%s : %s%02x%s : %s%02x%s ' % (
-            Fore.RED,
-            self.data[0],
-            Fore.RESET,
-            Fore.RED,
-            self.data[1],
-            Fore.RESET,
-            Fore.GREEN,
-            self.data[2],
-            Fore.RESET,
-            Fore.YELLOW,
-            self.data[3],
-            Fore.RESET,
-            Fore.BLUE,
-            self.data[4],
-            Fore.RESET,
-        ))
+        string += (
+            '| %s%02x%s : %s%02x%s : %s%02x%s : %s%02x%s : %s%02x%s ' % (
+                colorama.Fore.RED,
+                self.data[0],
+                colorama.Fore.RESET,
+                colorama.Fore.RED,
+                self.data[1],
+                colorama.Fore.RESET,
+                colorama.Fore.GREEN,
+                self.data[2],
+                colorama.Fore.RESET,
+                colorama.Fore.YELLOW,
+                self.data[3],
+                colorama.Fore.RESET,
+                colorama.Fore.BLUE,
+                self.data[4],
+                colorama.Fore.RESET,
+            ))
         for byte in self.data[5:]:
-            string += (': %s%02x%s ' % (Fore.MAGENTA, byte, Fore.RESET))
+            string += (': %s%02x%s ' % (colorama.Fore.MAGENTA, byte,
+                                        colorama.Fore.RESET))
         string += ('|')
         return string
 
@@ -540,16 +1000,14 @@ class KBIResponse(KBICommand):
             elif code == NC_UDP:
                 return '# udp rcv: saddr %s sport %s dport %s - %s bytes' % (
                     b2s(TYP.ADDR, payload[4:20], 16).rstrip('\r\n'),
-                    b2s(TYP.DEC, payload[2:4], 2),
-                    b2s(TYP.DEC, payload[0:2], 2),
-                    len(payload[20:]))
+                    b2s(TYP.DEC, payload[2:4], 2), b2s(TYP.DEC, payload[0:2],
+                                                       2), len(payload[20:]))
             elif code == NC_UDP_N:
                 return '# udp rcv: saddr %s [%s] sport %s dport %s - %s bytes' % (
                     b2s(TYP.ADDR, payload[36:52], 16).rstrip('\r\n'),
                     b2s(TYP.CHAR, payload[4:35], 31),
-                    b2s(TYP.DEC, payload[2:4], 2),
-                    b2s(TYP.DEC, payload[0:2], 2),
-                    len(payload[52:]))
+                    b2s(TYP.DEC, payload[2:4], 2), b2s(TYP.DEC, payload[0:2],
+                                                       2), len(payload[52:]))
             elif code == NC_DSTUN:
                 return '# dst unreachable: daddr %s' % b2s(
                     TYP.ADDR, payload[0:16], 16).rstrip('\r\n')

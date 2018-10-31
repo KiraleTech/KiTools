@@ -4,10 +4,9 @@ from itertools import repeat
 from threading import Thread
 from time import clock, sleep
 
+import colorama
 import serial
 from serial.tools.list_ports import comports
-from colorama import init as colorama_init
-from colorama import Back, Fore, Style
 
 from kitools import kicmds
 from kitools import kicobs
@@ -44,9 +43,10 @@ class KiDebug:
         '''Print the text if the ooption is enabled'''
         if option in self._options:
             if option == self.LOGS:
-                txt = Fore.BLACK + Back.CYAN + txt + Style.RESET_ALL
-                sleep(0.05) #  Try to avoid stdout concurrency problems
-            sys.stdout.write(str(txt) + '\n') #  Otherwise print makes two calls
+                txt = colorama.Fore.BLACK + colorama.Back.CYAN + txt + colorama.Style.RESET_ALL
+                sleep(0.05)  #  Try to avoid stdout concurrency problems
+            sys.stdout.write(
+                str(txt) + '\n')  #  Otherwise print makes two calls
 
     def has_option(self, option):
         '''Return True if the current instance has the option activated'''
@@ -82,7 +82,8 @@ class KiSerial:
             self.port = None
 
         if self.port:
-            colorama_init()
+            colorama.deinit()
+            colorama.init()
             self.debug = debug
             self.run = True
             self.start()
@@ -178,7 +179,7 @@ class KiSerial:
             error = self.KBI_ERRORS.get(size, ' Decode error.')
             self.debug.print_(KiDebug.KBI, error)
         return None, 0
-    
+
     def handshaking_failure(self, message):
         '''
         A failure in the application level handshaking (i.e. PC sends a 
@@ -193,7 +194,7 @@ class KiSerial:
         enumeration).
         '''
         self.port.close()
-        sleep(3)       
+        sleep(3)
         self.debug.print_(KiDebug.DEBUG, message)
 
     def usb_cmd(self, cmd, no_request=False, no_response=False):
@@ -224,12 +225,15 @@ class KiSerial:
                 response.append(line)
         return response, elapsed
 
-    def ksh_cmd(self, txt_cmd, debug_level=None, no_request=False,
+    def ksh_cmd(self,
+                txt_cmd,
+                debug_level=None,
+                no_request=False,
                 no_response=False):
         '''Send a text command'''
         if not self.port.isOpen():
             self.port.open()
-            
+
         cmd_out = []
         # Save debug setting and stop debug
         if debug_level is not None:
@@ -237,7 +241,8 @@ class KiSerial:
             self.debug = KiDebug(debug_level)
         # Print command
         if txt_cmd:
-            self.debug.print_(KiDebug.KSH, self.ksh2str(txt_cmd, color=Fore.GREEN))
+            self.debug.print_(KiDebug.KSH,
+                              self.ksh2str(txt_cmd, color=colorama.Fore.GREEN))
         elapsed = 0
         try:
             # UART command
@@ -260,14 +265,14 @@ class KiSerial:
                 cmd_out, elapsed = self.usb_cmd(
                     txt_cmd, no_response=no_response)
         except:
-        #except (serial.SerialException, serial.SerialTimeoutException):
+            #except (serial.SerialException, serial.SerialTimeoutException):
             self.handshaking_failure('Command error')
 
         # Print the response
         for line in cmd_out:
-            self.debug.print_(KiDebug.KSH,
-                              self.ksh2str(
-                                  line.rstrip('\r\n'), color=Fore.YELLOW))
+            self.debug.print_(
+                KiDebug.KSH,
+                self.ksh2str(line.rstrip('\r\n'), color=colorama.Fore.YELLOW))
         # Print elapsed time
         self.debug.print_(KiDebug.DEBUG,
                           ' [Elapsed %u us]' % int(elapsed * 1000000))
@@ -295,7 +300,7 @@ class KiSerial:
         self.logs = []
         self.ksh_cmd('debug module %s' % module, debug_level=KiDebug.LOGS)
         self.ksh_cmd('debug level %s' % level, debug_level=KiDebug.LOGS)
-    
+
     def wait_for_log(self, value, secs):
         '''Wait until the string "value" appears in the logs or "secs" seconds
         have passed, and disable all device logs'''
@@ -312,18 +317,20 @@ class KiSerial:
         '''Return device logs'''
         return self.logs
 
-    def ksh2str(self, cmd, color=Fore.GREEN):
+    def ksh2str(self, cmd, color=colorama.Fore.GREEN):
         '''Colored print of the command'''
-        port = Fore.CYAN
-        mac = Fore.MAGENTA
+        port = colorama.Fore.CYAN
+        mac = colorama.Fore.MAGENTA
         if self.bright:
-            color += Style.BRIGHT
-            port += Style.BRIGHT
-            mac += Style.BRIGHT
+            color += colorama.Style.BRIGHT
+            port += colorama.Style.BRIGHT
+            mac += colorama.Style.BRIGHT
         string = ('%s%-5s%s|%s%s%s> %s%s%s' %
-                  (port, self.name.split('/')[-1], Style.RESET_ALL, mac,
-                   self.hex_mac, Style.RESET_ALL, color, cmd, Style.RESET_ALL))
+                  (port, self.name.split('/')[-1], colorama.Style.RESET_ALL,
+                   mac, self.hex_mac, colorama.Style.RESET_ALL, color, cmd,
+                   colorama.Style.RESET_ALL))
         return string
+
 
 class KiSerialTh(KiSerial):
     '''This extension class makese use of threading to be able to catch logs
@@ -367,7 +374,8 @@ class KiSerialTh(KiSerial):
                         self.debug.print_(KiDebug.KBI, kbi_rsp)
                         if kbi_rsp.is_valid():
                             if kbi_rsp.is_notification():
-                                self.debug.print_(KiDebug.LOGS, kbi_rsp.to_text())
+                                self.debug.print_(KiDebug.LOGS,
+                                                  kbi_rsp.to_text())
                             else:
                                 self.read_queue.put(kbi_rsp)
                         else:
@@ -391,7 +399,8 @@ class KiSerialTh(KiSerial):
                     else:
                         received_chars += char
                 if KSHPROMPT in received_chars:
-                    response = received_chars.replace(KSHPROMPT, '').splitlines()
+                    response = received_chars.replace(KSHPROMPT,
+                                                      '').splitlines()
                     self.read_queue.put(response)
                     received_chars = ''
 
@@ -426,7 +435,8 @@ class KiSerialTh(KiSerial):
             self.debug = KiDebug(debug_level)
 
         # Print command
-        self.debug.print_(KiDebug.KSH, self.ksh2str(txt_cmd, color=Fore.GREEN))
+        self.debug.print_(KiDebug.KSH,
+                          self.ksh2str(txt_cmd, color=colorama.Fore.GREEN))
 
         cmd_start = clock()
         try:
@@ -460,9 +470,9 @@ class KiSerialTh(KiSerial):
 
         # Print the response
         for line in cmd_out:
-            self.debug.print_(KiDebug.KSH,
-                              self.ksh2str(
-                                  line.rstrip('\r\n'), color=Fore.YELLOW))
+            self.debug.print_(
+                KiDebug.KSH,
+                self.ksh2str(line.rstrip('\r\n'), color=colorama.Fore.YELLOW))
 
         # Print elapsed time
         self.debug.print_(KiDebug.DEBUG,
