@@ -6,7 +6,7 @@ import platform
 import struct
 import subprocess
 import threading
-from time import time, strftime, localtime
+from time import time, sleep, strftime, localtime
 
 from kitools import kiserial # pylint: disable=E0401
 
@@ -120,6 +120,7 @@ class KiSniffer:
         self.thread.join()
         self.serial_dev.flush_buffer()
         self.serial_dev.ksh_cmd('ifdown', no_response=True)
+        sleep(0.5) # Allow for last packet before flushing
         self.serial_dev.flush_buffer()
         for handler in self.handlers:
             handler.stop()
