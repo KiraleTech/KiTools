@@ -130,10 +130,13 @@ def dfu_find_and_flash(dfu_file):
         sys_exit('No Kirale DFU devices found.')
 
     print('\nThe following %d DFU devices were found:' % len(dfus))
-    for dfu in dfus:
-        print(dfu)
-    try_input('Press Enter to flash them all.')
-    parallel_program(dfu_flash, dfus, dfu_file)
+    try:
+        for dfu in dfus:
+            print(dfu)
+        try_input('Press Enter to flash them all.')
+        parallel_program(dfu_flash, dfus, dfu_file)
+    except:
+        sys.exit('Something went wrong. Try programming less devices at a time')
     for dfu in dfus:
         usb.util.dispose_resources(dfu.dev)
 
