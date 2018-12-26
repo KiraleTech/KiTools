@@ -4,6 +4,7 @@ from __future__ import print_function
 import argparse
 import os
 import platform
+import subprocess
 import sys
 from threading import Thread
 from time import sleep
@@ -173,7 +174,9 @@ def main():
                 args.file = WS_PATH
             while not os.path.exists(args.file):
                 args.file = input('Enter a valid path for Wireshark: ')
-            sniffer.config_pipe_handler(ws_path=args.file)
+            name = sniffer.config_pipe_handler()
+            wireshark_cmd = [args.file, '-i%s' % name, '-k']
+            ws_process = subprocess.Popen(wireshark_cmd)
         # File capture
         else:
             sniffer.config_file_handler(pcap_file=args.file)
@@ -195,12 +198,15 @@ def main():
 
     while True:
         try:
-            sleep(1)  # Not to keep the processor busy
+            sleep(0.5)  # Not to keep the processor busy
             for thread in threads:
                 if not thread.is_alive():
                     sys.exit('Program finished.')
         except (KeyboardInterrupt, EOFError):
             device.close()
+            if args.live:
+                ws_process.kill()
+                ws_process.wait()
             sys.exit('\nProgram finished by user.')
 
 

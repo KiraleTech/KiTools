@@ -4,11 +4,10 @@ from __future__ import print_function
 import os
 import platform
 import struct
-import subprocess
 import threading
 from time import time, sleep, strftime, localtime
 
-from kitools import kiserial # pylint: disable=E0401
+from kitools import kiserial  # pylint: disable=E0401
 
 if platform.system() in 'Windows':
     import win32api
@@ -77,10 +76,11 @@ class KiSniffer:
         self.handlers = []
         self.thread = None
         self.is_running = False
+        self.init_ts = 0
         self.usec = 0
         self.serial_dev = kiserial.KiSerial(port_name, debug=serial_debug)
         self.reset()
-        
+
     def config_file_handler(self, pcap_file=None, pcap_folder=None):
         '''Set up a file handler to store the received frames'''
         if not pcap_file:
@@ -91,15 +91,24 @@ class KiSniffer:
                 strftime('%Y-%m-%d_%H-%M-%S', localtime(time())))
         self.handlers.append(FileHandler(pcap_file))
 
-    def config_pipe_handler(self, ws_path):
+    def config_pipe_handler(self):
         '''Set up a pipe handler to store the received frames'''
         if platform.system() in 'Windows':
-            self.handlers.append(WinPipeHandler(ws_path))
+            name = r'\\.\pipe\Kirale%s' % int(time())
+            handler = WinPipeHandler(name)
         elif platform.system() in 'Linux':
-            self.handlers.append(UnixFifoHandler(ws_path))
+            name = '/tmp/Kirale%d' % int(time())
+            handler = UnixFifoHandler(name)
+        self.handlers.append(handler)
+        return name
 
     def start(self, channel):
         '''Start capturing'''
+        self.init_ts = time() * 1000000
+
+        for handle in self.handlers:
+            handle.start()
+
         self.set_channel(channel)
 
         if self.channel:
@@ -120,7 +129,7 @@ class KiSniffer:
         self.thread.join()
         self.serial_dev.flush_buffer()
         self.serial_dev.ksh_cmd('ifdown', no_response=True)
-        sleep(0.5) # Allow for last packet before flushing
+        sleep(0.5)  # Allow for last packet before flushing
         self.serial_dev.flush_buffer()
         for handler in self.handlers:
             handler.stop()
@@ -137,11 +146,10 @@ class KiSniffer:
             if frame_len is not None:
                 frame_data = self.serial_dev.port.read(frame_len)
                 if len(frame_data) == frame_len:
-                    self.usec = tstamp * 16
+                    self.usec = self.init_ts + tstamp * 16
                     frame = PCAPFrame(frame_data, self.usec)
                     for handler in self.handlers:
                         handler.handle(frame)
-
 
     def set_channel(self, channel):
         '''Set the channel if it is valid'''
@@ -161,7 +169,7 @@ class KiSniffer:
     def reset(self):
         '''Reset device'''
         status = self.serial_dev.ksh_cmd('show status', kiserial.KiDebug.NONE,
-          True)
+                                         True)
         if status and status[0] == 'none':
             return
         self.serial_dev.ksh_cmd('clear')
@@ -207,6 +215,9 @@ class FileHandler:
 
     def __init__(self, file_name):
         self.file_ = open(file_name, 'wb')
+
+    def start(self):
+        '''Write file header'''
         self.file_.write(PCAP_HDR_BYTES)
 
     def handle(self, frame):
@@ -222,17 +233,14 @@ class FileHandler:
 class WinPipeHandler:
     '''Windows handler for Wireshark pipe'''
 
-    def __init__(self, ws_path):
-        self.pipe = None
-        self.ws_process = None
-
-        pipe_name = 'Kirale%d' % int(time())
+    def __init__(self, name):
         self.pipe = win32pipe.CreateNamedPipe(
-            r'\\.\pipe\%s' % pipe_name, win32pipe.PIPE_ACCESS_OUTBOUND,
+            name, win32pipe.PIPE_ACCESS_OUTBOUND,
             win32pipe.PIPE_TYPE_BYTE | win32pipe.PIPE_WAIT, 1, 65536, 65536,
             1000, None)
-        wireshark_cmd = [ws_path, r'-i\\.\pipe\%s' % pipe_name, '-k']
-        self.ws_process = subprocess.Popen(wireshark_cmd)
+
+    def start(self):
+        '''Start the handler'''
         win32pipe.ConnectNamedPipe(self.pipe, None)
         win32file.WriteFile(self.pipe, PCAP_HDR_BYTES)
 
@@ -248,21 +256,19 @@ class WinPipeHandler:
         if win32file.FlushFileBuffers(self.pipe):
             if win32pipe.DisconnectNamedPipe(self.pipe):
                 win32api.CloseHandle(self.pipe)
-                self.ws_process.kill()
-                self.ws_process.wait()
 
 
 class UnixFifoHandler:
     '''Unix handler for Wireshark fifo'''
 
-    def __init__(self, ws_path):
-        fifo_name = '/tmp/Kirale%d' % int(time())
-        os.mkfifo(fifo_name)
-        # Lauch Wireshark
-        wireshark_cmd = [ws_path, r'-i%s' % fifo_name]
-        self.ws_process = subprocess.Popen(wireshark_cmd)
+    def __init__(self, name):
+        self.name = name
+        os.mkfifo(self.name)
+
+    def start(self):
+        '''Start the handler'''
         # Wait until pipe is open by Wireshark to be able to open it in write mode
-        fifo_fd = os.open(fifo_name, os.O_NONBLOCK | os.O_WRONLY)
+        fifo_fd = os.open(self.name, os.O_NONBLOCK | os.O_WRONLY)
         self.fifo = os.fdopen(fifo_fd, 'wb')
         self.fifo.write(PCAP_HDR_BYTES)
 
@@ -277,5 +283,3 @@ class UnixFifoHandler:
     def stop(self):
         '''Stop the handler'''
         self.fifo.close()
-        self.ws_process.kill()
-        self.ws_process.wait()
