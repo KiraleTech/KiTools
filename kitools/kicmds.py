@@ -132,6 +132,11 @@ TEXT2CLI = {
         'type': CT_CMD,
         'code': 0x00 | OP_EXEC
     },
+    'config thver': {
+        'type': CT_CMD,
+        'code': 0x01 | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 1)]
+    },
     'show uptime': {
         'type': CT_CMD,
         'code': 0x02 | OP_READ
@@ -561,6 +566,43 @@ TEXT2CLI = {
         'type': CT_CMD,
         'code': 0x39 | OP_READ
     },
+    'config service add': {
+        'type':
+        CT_CMD,
+        'code':
+        0x3A | OP_WRITE,
+        'params': [
+            lambda x: s2b(TYP.DEC, x, 1), lambda x: s2b(TYP.STR, x),
+            lambda x: s2b(TYP.STR, x)
+        ]
+    },
+    'config cslch': {
+        'type': CT_CMD,
+        'code': 0x3B | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 1)]
+    },
+    'show cslch': {
+        'type': CT_CMD,
+        'code': 0x3B | OP_READ
+    },
+    'config csltout': {
+        'type': CT_CMD,
+        'code': 0x3C | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 4)]
+    },
+    'show csltout': {
+        'type': CT_CMD,
+        'code': 0x3C | OP_READ
+    },
+    'config cslprd': {
+        'type': CT_CMD,
+        'code': 0x3D | OP_WRITE,
+        'params': [lambda x: s2b(TYP.DEC, x, 2)]
+    },
+    'show cslprd': {
+        'type': CT_CMD,
+        'code': 0x3D | OP_READ
+    },
     # Test Harness Specific Commands
     'config provurl': {
         'type': CT_GOL,
@@ -836,6 +878,11 @@ CLI2TEXT = {
     (CT_RSC | RC_VALUE, 0x39 | OP_READ): [
         'services', lambda x: b2s(TYP.SERV, x)
     ],
+    (CT_RSC | RC_VALUE, 0x3B | OP_READ): ['cslch', lambda x: b2s(TYP.DEC, x)],
+    (CT_RSC | RC_VALUE, 0x3C | OP_READ): [
+        'csltout', lambda x: b2s(TYP.DEC, x)
+    ],
+    (CT_RSC | RC_VALUE, 0x3D | OP_READ): ['cslprd', lambda x: b2s(TYP.DEC, x)],
     (CT_RSG | RC_VALUE, 0x01 | OP_READ): [
         'commsid', lambda x: b2s(TYP.HEX, x)
     ],
