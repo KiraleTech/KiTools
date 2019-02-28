@@ -80,15 +80,14 @@ def get_dfu_devices():
                         dev.detach_kernel_driver(i)
         # Initialize DFU devices
         try:
-            dfus.append(kidfu.KiDfuDevice(dev))
+            dfu = kidfu.KiDfuDevice(dev)
+            dfus.append(dfu)
         except:  # usb.core.USBError, NotImplementedError:
             pass
 
     return dfus
 
-
-def dfu_find_and_flash(dfu_file):
-    '''Flash a DFU file'''
+def backend_init():
     # Initialize backend
     global BACKEND
     if platform.system() in 'Windows':
@@ -98,7 +97,11 @@ def dfu_find_and_flash(dfu_file):
     if not BACKEND:
         sys_exit('No USB library found.')
 
+def dfu_find_and_flash(dfu_file, unattended=False):
+    '''Flash a DFU file'''
+
     # Count DFU devices
+    backend_init()
     dfus = get_dfu_devices()
     num_dfus = len(dfus)
 
@@ -109,7 +112,8 @@ def dfu_find_and_flash(dfu_file):
             '\nThe following %d run-time devices where found:' % len(run_dfus))
         for dfu in run_dfus:
             print(dfu)
-        try_input('Press Enter to detach them all.')
+        if not unattended:
+            try_input('Press Enter to detach them all.')
         print('Detaching devices...')
         for dfu in dfus:
             if not dfu.is_boot():
@@ -133,7 +137,8 @@ def dfu_find_and_flash(dfu_file):
     try:
         for dfu in dfus:
             print(dfu)
-        try_input('Press Enter to flash them all.')
+        if not unattended:
+            try_input('Press Enter to flash them all.')
         parallel_program(dfu_flash, dfus, dfu_file)
     except:
         sys.exit('Something went wrong. Try programming less devices at a time')
@@ -150,7 +155,8 @@ def dfu_find_and_flash(dfu_file):
         if len(list(get_usb_devices())) == num_dfus:
             print('')
             return
-    sys_exit('\nSome of the devices were not properly flashed.')
+    if not unattended:
+        sys_exit('\nSome of the devices were not properly flashed.')
 
 
 def dfu_flash(dfu, dfu_file, queue, pos=0):
