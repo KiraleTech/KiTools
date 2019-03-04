@@ -35,6 +35,7 @@ if platform.system() in 'Windows':
         LIBUSB_PATH += '\\libusb\\MS64\\libusb-1.0.dll'
 
 KIRALE_VID = 0x2def
+MAX_PARALLEL_DEVICES = 18
 
 
 def try_input(txt=None):
@@ -62,31 +63,6 @@ def sys_exit(msg):
     sys.exit(colorize(msg, colorama.Fore.RED))
 
 
-def get_usb_devices():
-    '''Return a list of connected Kirale USB devices'''
-    return usb.core.find(idVendor=KIRALE_VID, find_all=True, backend=BACKEND)
-
-
-def get_dfu_devices():
-    '''Return a list of connected Kirale DFU devices'''
-    dfus = []
-
-    for dev in get_usb_devices():
-        # Detach kernel driver
-        if platform.system() not in 'Windows':
-            for config in dev:
-                for i in range(config.bNumInterfaces):
-                    if dev.is_kernel_driver_active(i):
-                        dev.detach_kernel_driver(i)
-        # Initialize DFU devices
-        try:
-            dfu = kidfu.KiDfuDevice(dev)
-            dfus.append(dfu)
-        except:  # usb.core.USBError, NotImplementedError:
-            pass
-
-    return dfus
-
 def backend_init():
     # Initialize backend
     global BACKEND
@@ -97,66 +73,109 @@ def backend_init():
     if not BACKEND:
         sys_exit('No USB library found.')
 
+
+def get_usb_devices():
+    '''Return a list of connected Kirale USB devices'''
+    return usb.core.find(idVendor=KIRALE_VID, find_all=True, backend=BACKEND)
+
+
+def get_dfu_devices(size, is_boot=False, timeout=15):
+    '''Return a list of connected Kirale DFU devices'''
+
+    for _ in repeat(None, timeout):
+        dfus = []
+        for dev in get_usb_devices():
+            # Detach kernel driver
+            if platform.system() not in 'Windows':
+                for config in dev:
+                    for i in range(config.bNumInterfaces):
+                        if dev.is_kernel_driver_active(i):
+                            dev.detach_kernel_driver(i)
+            # Initialize DFU devices
+            try:
+                dfu = kidfu.KiDfuDevice(dev)
+                if is_boot == dfu.is_boot():
+                    dfus.append(dfu)
+                else:
+                    usb.util.dispose_resources(dev)
+            except:  # usb.core.USBError, NotImplementedError:
+                usb.util.dispose_resources(dev)
+
+        if len(dfus) >= size:
+            break
+        for dfu in dfus:
+            usb.util.dispose_resources(dfu.dev)
+        print('.', end='')
+        sleep(1)
+
+    print('')
+    return dfus
+
+
 def dfu_find_and_flash(dfu_file, unattended=False):
     '''Flash a DFU file'''
 
-    # Count DFU devices
     backend_init()
-    dfus = get_dfu_devices()
-    num_dfus = len(dfus)
 
-    # Detach KiNOS running devices
-    run_dfus = [dfu for dfu in dfus if not dfu.is_boot()]
+    # Find run-tim Kirale devices
+    run_dfus = get_dfu_devices(0, is_boot=False)
     if run_dfus:
-        print(
-            '\nThe following %d run-time devices where found:' % len(run_dfus))
+        print('List of %d run-time devices:' % len(run_dfus))
+
+        # Detach KiNOS running devices
         for dfu in run_dfus:
             print(dfu)
-        if not unattended:
-            try_input('Press Enter to detach them all.')
-        print('Detaching devices...')
-        for dfu in dfus:
-            if not dfu.is_boot():
-                try:
-                    dfu.detach(0)
-                except usb.core.USBError:
-                    pass
+            try:
+                dfu.detach(0)
+            except usb.core.USBError:
+                pass
             usb.util.dispose_resources(dfu.dev)
+
         # Wait until all devices are detached
-        sleep(2 + 0.1 * num_dfus)
+        print('\nWaiting for the devices to detach.', end='')
+
+    boot_dfus = get_dfu_devices(len(run_dfus), is_boot=True)
+    print('List of %d DFU devices:' % len(boot_dfus))
+
+    # Print list
+    if not boot_dfus:
+        return
+    for dfu in boot_dfus:
+        print(dfu)
+        usb.util.dispose_resources(dfu.dev)
+    if not unattended:
+        try_input('\nPress enter to flash all the listed devices.\n')
 
     # Flash DFU mode devices
-    dfus = [dfu for dfu in get_dfu_devices() if dfu.is_boot()]
-    if len(dfus) < num_dfus:
-        sys_exit('Expecting at least %d DFU devices, found %d.' % (num_dfus,
-                                                                   len(dfus)))
-    if not dfus:
-        sys_exit('No Kirale DFU devices found.')
+    start = time()
+    results = []
+    dfus = get_dfu_devices(len(boot_dfus), is_boot=True)
+    while dfus:
+        print('Remaining %d devices. ' % len(dfus), end='')
+        batch = dfus[:MAX_PARALLEL_DEVICES]
+        print('Flashing a batch of %d devices...' % len(batch))
+        results += parallel_program(dfu_flash, batch, dfu_file)
+        for dfu in batch:
+            usb.util.dispose_resources(dfu.dev)
+        dfus = dfus[MAX_PARALLEL_DEVICES:]
 
-    print('\nThe following %d DFU devices were found:' % len(dfus))
-    try:
-        for dfu in dfus:
-            print(dfu)
-        if not unattended:
-            try_input('Press Enter to flash them all.')
-        parallel_program(dfu_flash, dfus, dfu_file)
-    except:
-        sys.exit('Something went wrong. Try programming less devices at a time')
-    for dfu in dfus:
-        usb.util.dispose_resources(dfu.dev)
+    flash_summary(results, start)
 
     # Wait until all devices are in runtime
+    print('\nWaiting for the devices to apply the new firmware.', end='')
+    _ = get_dfu_devices(len(boot_dfus), is_boot=False)
+
+
+def flash_summary(results, start):
     print(
-        '\nPlease wait for all the devices to return to run-time mode...',
-        end='')
-    for _ in repeat(None, 12):
-        sleep(1)
-        print('.', end='')
-        if len(list(get_usb_devices())) == num_dfus:
-            print('')
-            return
-    if not unattended:
-        sys_exit('\nSome of the devices were not properly flashed.')
+        colorize(
+            'Elapsed: %s' % strftime("%M m %S s", localtime(time() - start)),
+            colorama.Fore.YELLOW))
+    for result in results:
+        print('\t' + result)
+    print('Flashed %s of %d devices.' % (colorize(
+        len([r for r in results if 'OK' in r]), colorama.Fore.GREEN),
+        len(results)))
 
 
 def dfu_flash(dfu, dfu_file, queue, pos=0):
@@ -210,7 +229,9 @@ def kbi_find_and_flash(dfu_file):
         sys_exit('No KBI devices found.')
 
     # Program the devices
-    parallel_program(kbi_flash, kidevs, dfu_file)
+    start = time()
+    results = parallel_program(kbi_flash, kidevs, dfu_file)
+    flash_summary(results, start)
 
 
 def kbi_flash(kidev, dfu_file, queue, pos=0):
@@ -266,7 +287,6 @@ def kbi_flash(kidev, dfu_file, queue, pos=0):
 
 def parallel_program(flash_func, devices, dfu_file):
     '''Parallel programming'''
-    start = time()
     queue = queue_.Queue()
     threads = []
     results = []
@@ -281,12 +301,4 @@ def parallel_program(flash_func, devices, dfu_file):
         thread.join()
         results.append(queue.get())
     print('\n' * len(devices))
-    print(
-        colorize(
-            'Elapsed: %s' % strftime("%M m %S s", localtime(time() - start)),
-            colorama.Fore.YELLOW))
-    for result in results:
-        print('\t' + result)
-    print('Flashed %s of %d devices.' % (colorize(
-        len([r for r in results if 'OK' in r]), colorama.Fore.GREEN),
-                                         len(results)))
+    return results
