@@ -333,7 +333,7 @@ class KiSerial:
 
 
 class KiSerialTh(KiSerial):
-    '''This extension class makese use of threading to be able to catch logs
+    '''This extension class makes use of threading to be able to catch logs
     and notifications in real time.'''
 
     def start(self):

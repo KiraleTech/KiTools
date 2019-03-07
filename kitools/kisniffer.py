@@ -1,11 +1,12 @@
 '''Kirale Sniffer'''
 from __future__ import print_function
 
+import datetime
 import os
 import platform
 import struct
 import threading
-from time import time, sleep, strftime, localtime
+from time import time, sleep, strftime, localtime, mktime
 
 from kitools import kiserial  # pylint: disable=E0401
 
@@ -104,7 +105,8 @@ class KiSniffer:
 
     def start(self, channel):
         '''Start capturing'''
-        self.init_ts = time() * 1000000
+        now = datetime.datetime.now()
+        self.init_ts = mktime(now.timetuple()) * 1000000 + now.microsecond
 
         for handle in self.handlers:
             handle.start()
