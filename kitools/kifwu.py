@@ -89,8 +89,11 @@ def get_dfu_devices(size, is_boot=False, timeout=15):
             if platform.system() not in 'Windows':
                 for config in dev:
                     for i in range(config.bNumInterfaces):
-                        if dev.is_kernel_driver_active(i):
-                            dev.detach_kernel_driver(i)
+                        try:
+                            if dev.is_kernel_driver_active(i):
+                                dev.detach_kernel_driver(i)
+                        except:
+                            pass
             # Initialize DFU devices
             try:
                 dfu = kidfu.KiDfuDevice(dev)
@@ -163,7 +166,9 @@ def dfu_find_and_flash(dfu_file, unattended=False):
 
     # Wait until all devices are in runtime
     print('\nWaiting for the devices to apply the new firmware.', end='')
-    _ = get_dfu_devices(len(boot_dfus), is_boot=False)
+    dfus = get_dfu_devices(len(boot_dfus), is_boot=False)
+    for dfu in dfus:
+        usb.util.dispose_resources(dfu.dev)
 
 
 def flash_summary(results, start):
