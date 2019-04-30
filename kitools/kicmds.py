@@ -135,7 +135,7 @@ TEXT2CLI = {
     'config thver': {
         'type': CT_CMD,
         'code': 0x01 | OP_WRITE,
-        'params': [lambda x: s2b(TYP.DEC, x, 1)]
+        'params': [lambda x: s2b(TYP.DEC, x, 2)]
     },
     'show uptime': {
         'type': CT_CMD,
