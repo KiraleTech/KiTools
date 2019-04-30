@@ -20,13 +20,13 @@ SW_VER = 'Sniffer'
 
 class KiraleFrameHeader():  # pylint: disable=too-few-public-methods
     '''Kirale frame header representation
-    |  4 bytes     | 2 bytes |   4 bytes     | Packet |
+    |  4 bytes     | 2 bytes |   8 bytes     | Packet |
     | Magic number |  Length | Timestamp[us] | ...... |
     |   c11ffe72   |         |               |        |
     '''
 
     MAGIC_NUMBER = 0xC11FFE72
-    FRAME_HDR_FMT = '>LHL'
+    FRAME_HDR_FMT = '>LHQ'
 
     def __init__(self):
         self.bytes = bytearray(struct.Struct(self.FRAME_HDR_FMT).size)
@@ -184,9 +184,9 @@ class PCAPFrame:  # pylint: disable=too-few-public-methods
         header = struct.pack(
             '>LLLL',
             int(usec / 1000000),  # ts_sec
-            usec % 1000000,  # ts_usec
-            len(frame_data),  # incl_len
-            len(frame_data)  # orig_len
+            int(usec % 1000000),  # ts_usec
+            int(len(frame_data)),  # incl_len
+            int(len(frame_data))  # orig_len
         )
         self.frame = header + frame_data
 
