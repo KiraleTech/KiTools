@@ -80,6 +80,11 @@ class Decoder:
         # Python 2 transformation
         if isinstance(byte, str):
             byte = bytearray([byte])[0]
+        # Python 3 ascii to int
+        try:
+            byte = ord(byte)
+        except:
+            pass
         self.inc += bytearray([byte])
 
         # Analyze code
