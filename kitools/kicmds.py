@@ -111,7 +111,7 @@ def s2b(type_, str_, size=0):
         if len(str_) % 2 == 0 and str_.startswith('0x'):
             return bytearray.fromhex(str_.replace('0x', ''))
     elif type_ is TYP.STR:
-        return bytearray(list(map(ord, str_))) + bytearray(1)
+        return bytearray(list(map(ord, str_)))
     elif type_ is TYP.STRN:
         str_bytes = bytearray(list(map(ord, str_[:size])))
         return str_bytes + bytearray(size - len(str_bytes) + 1)
@@ -136,6 +136,10 @@ TEXT2CLI = {
         'type': CT_CMD,
         'code': 0x01 | OP_WRITE,
         'params': [lambda x: s2b(TYP.DEC, x, 2)]
+    },
+    'show thver': {
+        'type': CT_CMD,
+        'code': 0x01 | OP_READ
     },
     'show uptime': {
         'type': CT_CMD,
@@ -434,7 +438,7 @@ TEXT2CLI = {
         'type':
         CT_CMD,
         'code':
-        0x27 | OP_WRITE,
+        0x26 | OP_WRITE,
         'params': [
             lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1),
             lambda x: s2b(TYP.HEX, x)
@@ -442,7 +446,7 @@ TEXT2CLI = {
     },
     'config route remove': {
         'type': CT_CMD,
-        'code': 0x27 | OP_DEL,
+        'code': 0x26 | OP_DEL,
         'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1)]
     },
     'show parent': {
@@ -613,25 +617,6 @@ TEXT2CLI = {
         'type': CT_GOL,
         'code': 0x01 | OP_READ
     },
-    'config sjitter': {
-        'type': CT_GOL,
-        'code': 0x05 | OP_WRITE,
-        'params': [lambda x: s2b(TYP.DEC, x, 1)]
-    },
-    'config seqctr': {
-        'type': CT_GOL,
-        'code': 0x0b | OP_WRITE,
-        'params': [lambda x: s2b(TYP.DEC, x, 4)]
-    },
-    'show seqctr': {
-        'type': CT_GOL,
-        'code': 0x0b | OP_READ
-    },
-    'config seqguard': {
-        'type': CT_GOL,
-        'code': 0x0c | OP_WRITE,
-        'params': [lambda x: s2b(TYP.DEC, x, 4)]
-    },
     'exec activeget': {
         'type': CT_GOL,
         'code': 0x11 | OP_EXEC,
@@ -680,11 +665,6 @@ TEXT2CLI = {
             lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.HEX, x),
             lambda x: s2b(TYP.HEX, x)
         ]
-    },
-    'config rotation': {
-        'type': CT_GOL,
-        'code': 0x23 | OP_WRITE,
-        'params': [lambda x: s2b(TYP.DEC, x, 2)]
     }
 }
 
@@ -789,6 +769,8 @@ def b2s(type_, bytes_, size=None):
 
 
 CLI2TEXT = {
+    (CT_RSC | RC_VALUE, 0x01 | OP_READ):
+    ['thver', lambda x: b2s(TYP.DEC, x)],
     (CT_RSC | RC_VALUE, 0x02 | OP_READ):
     ['uptime', lambda x: b2s(TYP.TIME, x)],
     (CT_RSC | RC_VALUE, 0x04 | OP_READ):
@@ -885,9 +867,6 @@ CLI2TEXT = {
     (CT_RSC | RC_VALUE, 0x3D | OP_READ): ['cslprd', lambda x: b2s(TYP.DEC, x)],
     (CT_RSG | RC_VALUE, 0x01 | OP_READ): [
         'commsid', lambda x: b2s(TYP.HEX, x)
-    ],
-    (CT_RSG | RC_VALUE, 0x0b | OP_READ): [
-        'kseqcounter', lambda x: b2s(TYP.DEC, x)
     ]
 }
 
