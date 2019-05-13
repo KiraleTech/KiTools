@@ -20,25 +20,46 @@ SW_VER = 'Sniffer'
 
 class KiraleFrameHeader():  # pylint: disable=too-few-public-methods
     '''Kirale frame header representation
-    |  4 bytes     | 2 bytes |   8 bytes     | Packet |
+    |  4 bytes     | 2 bytes |   4 bytes     | Packet |
     | Magic number |  Length | Timestamp[us] | ...... |
     |   c11ffe72   |         |               |        |
+    or
+    |  4 bytes     | 2 bytes |   8 bytes     | Packet |
+    | Magic number |  Length | Timestamp[us] | ...... |
+    |   aabbccdd   |         |               |        |
     '''
 
-    MAGIC_NUMBER = 0xC11FFE72
-    FRAME_HDR_FMT = '>LHQ'
+    REPRS = [
+        {
+            'mgc': 0xc11ffe72,
+            'fmt': '>HL'
+        },
+        {
+            'mgc': 0x534e4946,
+            'fmt': '>HQ'
+        },
+    ]
 
     def __init__(self):
-        self.bytes = bytearray(struct.Struct(self.FRAME_HDR_FMT).size)
+        self.bytes = bytearray()
+        self.fmt = None
 
     def add_byte(self, byte):
         '''Append a byte to the right of the header and return frame len
          and timestamp if the header is valid'''
-        self.bytes.pop(0)
         self.bytes.append(byte)
-        magic_number, frame_len, tstamp = struct.unpack_from(
-            self.FRAME_HDR_FMT, self.bytes)
-        if magic_number == self.MAGIC_NUMBER:
+        if len(self.bytes) == 4 and not self.fmt:
+            for frame_type in self.REPRS:
+                magic = struct.unpack_from('>L', self.bytes)[0]
+                if magic == frame_type['mgc']:
+                    self.fmt = frame_type['fmt']
+                    return None, None
+            self.bytes.pop(0)
+        elif self.fmt and len(
+                self.bytes) == (struct.Struct(self.fmt).size + 4):
+            frame_len, tstamp = struct.unpack_from(self.fmt, self.bytes[4:])
+            self.bytes = bytearray()
+            self.fmt = None
             return frame_len, tstamp
         return None, None
 
