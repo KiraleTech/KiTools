@@ -19,6 +19,7 @@ from kitools import kidfu
 from kitools import kicmds
 
 import usb.backend.libusb1 as libusb1
+
 BACKEND = None
 
 if sys.version_info > (3, 0):
@@ -34,15 +35,22 @@ if platform.system() in 'Windows':
     else:
         LIBUSB_PATH += '\\libusb\\MS64\\libusb-1.0.dll'
 
-KIRALE_VID = 0x2def
+KIRALE_VID = 0x2DEF
 MAX_PARALLEL_DEVICES = 18
 
 
 def try_input(txt=None):
     '''Normal input but catching the keyboard interruption'''
     sys.stdout.write(
-        '%s%s%s%s%s ' % (colorama.Style.BRIGHT, colorama.Back.BLUE,
-                         colorama.Fore.WHITE, txt, colorama.Style.RESET_ALL))
+        '%s%s%s%s%s '
+        % (
+            colorama.Style.BRIGHT,
+            colorama.Back.BLUE,
+            colorama.Fore.WHITE,
+            txt,
+            colorama.Style.RESET_ALL,
+        )
+    )
     try:
         if sys.version_info > (3, 0):
             typed = input().strip()
@@ -175,12 +183,18 @@ def flash_summary(results, start):
     print(
         colorize(
             'Elapsed: %s' % strftime("%M m %S s", localtime(time() - start)),
-            colorama.Fore.YELLOW))
+            colorama.Fore.YELLOW,
+        )
+    )
     for result in results:
         print('\t' + result)
-    print('Flashed %s of %d devices.' % (colorize(
-        len([r for r in results if 'OK' in r]), colorama.Fore.GREEN),
-        len(results)))
+    print(
+        'Flashed %s of %d devices.'
+        % (
+            colorize(len([r for r in results if 'OK' in r]), colorama.Fore.GREEN),
+            len(results),
+        )
+    )
 
 
 def dfu_flash(dfu, dfu_file, queue, pos=0):
@@ -190,18 +204,18 @@ def dfu_flash(dfu, dfu_file, queue, pos=0):
     if dfu.get_status()[1] == kidfu.DfuState.DFU_ERROR:
         dfu.clear_status()
     # Flash
-    blocks = [
-        dfu_file.data[i:i + 64] for i in range(0, len(dfu_file.data), 64)
-    ]
+    blocks = [dfu_file.data[i : i + 64] for i in range(0, len(dfu_file.data), 64)]
     for bnum, block in enumerate(
-            tqdm(
-                blocks,
-                unit='block',
-                miniters=1,
-                desc=colorize(snum, colorama.Fore.CYAN),
-                position=pos,
-                dynamic_ncols=True,
-                leave=True)):
+        tqdm(
+            blocks,
+            unit='block',
+            miniters=1,
+            desc=colorize(snum, colorama.Fore.CYAN),
+            position=pos,
+            dynamic_ncols=True,
+            leave=True,
+        )
+    ):
         try:
             dfu.write(bnum, block)
             status = dfu.wait_while_state(kidfu.DfuState.DFU_DOWNLOAD_BUSY)
@@ -241,47 +255,53 @@ def kbi_find_and_flash(dfu_file):
 
 def kbi_flash(kidev, dfu_file, queue, pos=0):
     '''Flash a list of KBI devices with the given file'''
+    ctype = kicmds.FT_CMD
+    ccode = kicmds.CMD_FW_UP
+    crsp_val = kicmds.FT_RSP | kicmds.RC_VALUE
+    crsp_err = kicmds.FT_RSP | kicmds.RC_FWUERR
     try:
         dev = kiserial.KiSerial(kidev.port)
         # Flash
-        blocks = [
-            dfu_file.data[i:i + 64] for i in range(0, len(dfu_file.data), 64)
-        ]
+        blocks = [dfu_file.data[i : i + 64] for i in range(0, len(dfu_file.data), 64)]
         for bnum, block in enumerate(
-                tqdm(
-                    blocks,
-                    unit='block',
-                    miniters=1,
-                    desc=colorize(kidev.snum, colorama.Fore.CYAN),
-                    position=pos,
-                    dynamic_ncols=True,
-                    leave=True)):
+            tqdm(
+                blocks,
+                unit='block',
+                miniters=1,
+                desc=colorize(kidev.snum, colorama.Fore.CYAN),
+                position=pos,
+                dynamic_ncols=True,
+                leave=True,
+            )
+        ):
             # Payload is the block number plus the data
             payload = struct.pack('>H', bnum) + block
             # Keep sending the same block until the response matches
             retries = 5
             while retries:
-                kbi_req = kicmds.KBICommand(None, 0x40, 0x2f, payload)
+                kbi_req = kicmds.KBICommand(None, ctype, ccode, payload)
                 kbi_rsp, _ = dev.kbi_cmd(kbi_req)
                 if kbi_rsp.is_valid():
+                    rtype = kbi_rsp.get_type()
+                    rcode = kbi_rsp.get_code()
+                    rpload = kbi_rsp.get_payload()
                     # Protocol error, finish
-                    if kbi_rsp.get_type() is 0x87:
+                    if rtype == crsp_err:
                         queue.put('%s: FWU error' % kidev.snum)
                         return
-                    # Received block number
-                    if kbi_rsp.get_payload() is not None:
-                        recv_bnum = struct.unpack('>H',
-                                                  kbi_rsp.get_payload()[:2])[0]
-                    # Block sent successfully
-                    if kbi_rsp.get_type() is 0x81 and kbi_rsp.get_code(
-                    ) is 0x2f and recv_bnum == bnum:
-                        break
+                    elif rtype == crsp_val and len(rpload) >= 2:
+                        # Received block number
+                        recv_bnum = struct.unpack('>H', rpload[:2])[0]
+                        # Block sent successfully
+                        if rcode == ccode and recv_bnum == bnum:
+                            break
                 # Give some time to resend the block
                 sleep(5)
                 retries -= 1
             if not retries:
-                queue.put('%s: Could not send block #%u after 5 retries.' %
-                          (kidev.snum, bnum))
+                queue.put(
+                    '%s: Could not send block #%u after 5 retries.' % (kidev.snum, bnum)
+                )
                 return
         # All went good, reset the device
         dev.ksh_cmd('reset')
@@ -298,8 +318,7 @@ def parallel_program(flash_func, devices, dfu_file):
     tqdm.monitor_interval = 0
 
     for pos, dev in enumerate(devices):
-        threads.append(
-            Thread(target=flash_func, args=[dev, dfu_file, queue, pos]))
+        threads.append(Thread(target=flash_func, args=[dev, dfu_file, queue, pos]))
     for thread in threads:
         thread.start()
     for thread in threads:

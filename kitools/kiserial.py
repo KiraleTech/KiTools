@@ -258,7 +258,7 @@ class KiSerial:
                         kbi_rsp, elapsed = self.kbi_cmd(kbi_req)
                     if kbi_rsp is None:
                         cmd_out = ['Read timeout']
-                    elif kbi_rsp.get_code() is kbi_req.get_code():
+                    elif kbi_rsp.get_code() == kbi_req.get_code():
                         cmd_out = kbi_rsp.to_text().splitlines()
             # USB command
             else:
