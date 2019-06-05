@@ -22,6 +22,7 @@ KSHPROMPT = 'kinos@local:~$ '
 class KiDebug:
     '''Used by KiSerial to show different information in stdout.
     Options: NONE, KSH, KBI, LOGS, DEBUG'''
+
     NONE = 0
     KSH = 1
     KBI = 2
@@ -43,10 +44,14 @@ class KiDebug:
         '''Print the text if the ooption is enabled'''
         if option in self._options:
             if option == self.LOGS:
-                txt = colorama.Fore.BLACK + colorama.Back.CYAN + txt + colorama.Style.RESET_ALL
+                txt = (
+                    colorama.Fore.BLACK
+                    + colorama.Back.CYAN
+                    + txt
+                    + colorama.Style.RESET_ALL
+                )
                 sleep(0.05)  #  Try to avoid stdout concurrency problems
-            sys.stdout.write(
-                str(txt) + '\n')  #  Otherwise print makes two calls
+            sys.stdout.write(str(txt) + '\n')  #  Otherwise print makes two calls
 
     def has_option(self, option):
         '''Return True if the current instance has the option activated'''
@@ -103,7 +108,7 @@ class KiSerial:
         '''Return a Serial object with the required parameters'''
         driver_error = 'A device attached to the system is not functioning.'
         try:
-            return serial.Serial(name, baudrate=baud, timeout=0.2)
+            return serial.Serial(name, baudrate=baud, timeout=0.2, writeTimeout=0)
         except serial.serialutil.SerialException as exc:
             if driver_error in str(exc):
                 # Retry in case of Windows driver problems
@@ -225,11 +230,7 @@ class KiSerial:
                 response.append(line)
         return response, elapsed
 
-    def ksh_cmd(self,
-                txt_cmd,
-                debug_level=None,
-                no_request=False,
-                no_response=False):
+    def ksh_cmd(self, txt_cmd, debug_level=None, no_request=False, no_response=False):
         '''Send a text command'''
         if not self.port.isOpen():
             self.port.open()
@@ -241,8 +242,9 @@ class KiSerial:
             self.debug = KiDebug(debug_level)
         # Print command
         if txt_cmd:
-            self.debug.print_(KiDebug.KSH,
-                              self.ksh2str(txt_cmd, color=colorama.Fore.GREEN))
+            self.debug.print_(
+                KiDebug.KSH, self.ksh2str(txt_cmd, color=colorama.Fore.GREEN)
+            )
         elapsed = 0
         try:
             # UART command
@@ -262,20 +264,19 @@ class KiSerial:
                         cmd_out = kbi_rsp.to_text().splitlines()
             # USB command
             else:
-                cmd_out, elapsed = self.usb_cmd(
-                    txt_cmd, no_response=no_response)
+                cmd_out, elapsed = self.usb_cmd(txt_cmd, no_response=no_response)
         except:
-            #except (serial.SerialException, serial.SerialTimeoutException):
+            # except (serial.SerialException, serial.SerialTimeoutException):
             self.handshaking_failure('Command error')
 
         # Print the response
         for line in cmd_out:
             self.debug.print_(
                 KiDebug.KSH,
-                self.ksh2str(line.rstrip('\r\n'), color=colorama.Fore.YELLOW))
+                self.ksh2str(line.rstrip('\r\n'), color=colorama.Fore.YELLOW),
+            )
         # Print elapsed time
-        self.debug.print_(KiDebug.DEBUG,
-                          ' [Elapsed %u us]' % int(elapsed * 1000000))
+        self.debug.print_(KiDebug.DEBUG, ' [Elapsed %u us]' % int(elapsed * 1000000))
         # Restore debug setting
         if debug_level is not None:
             self.debug = debug
@@ -325,10 +326,17 @@ class KiSerial:
             color += colorama.Style.BRIGHT
             port += colorama.Style.BRIGHT
             mac += colorama.Style.BRIGHT
-        string = ('%s%-5s%s|%s%s%s> %s%s%s' %
-                  (port, self.name.split('/')[-1], colorama.Style.RESET_ALL,
-                   mac, self.hex_mac, colorama.Style.RESET_ALL, color, cmd,
-                   colorama.Style.RESET_ALL))
+        string = '%s%-5s%s|%s%s%s> %s%s%s' % (
+            port,
+            self.name.split('/')[-1],
+            colorama.Style.RESET_ALL,
+            mac,
+            self.hex_mac,
+            colorama.Style.RESET_ALL,
+            color,
+            cmd,
+            colorama.Style.RESET_ALL,
+        )
         return string
 
 
@@ -374,8 +382,7 @@ class KiSerialTh(KiSerial):
                         self.debug.print_(KiDebug.KBI, kbi_rsp)
                         if kbi_rsp.is_valid():
                             if kbi_rsp.is_notification():
-                                self.debug.print_(KiDebug.LOGS,
-                                                  kbi_rsp.to_text())
+                                self.debug.print_(KiDebug.LOGS, kbi_rsp.to_text())
                             else:
                                 self.read_queue.put(kbi_rsp)
                         else:
@@ -399,8 +406,7 @@ class KiSerialTh(KiSerial):
                     else:
                         received_chars += char
                 if KSHPROMPT in received_chars:
-                    response = received_chars.replace(KSHPROMPT,
-                                                      '').splitlines()
+                    response = received_chars.replace(KSHPROMPT, '').splitlines()
                     self.read_queue.put(response)
                     received_chars = ''
 
@@ -435,8 +441,7 @@ class KiSerialTh(KiSerial):
             self.debug = KiDebug(debug_level)
 
         # Print command
-        self.debug.print_(KiDebug.KSH,
-                          self.ksh2str(txt_cmd, color=colorama.Fore.GREEN))
+        self.debug.print_(KiDebug.KSH, self.ksh2str(txt_cmd, color=colorama.Fore.GREEN))
 
         cmd_start = clock()
         try:
@@ -457,10 +462,7 @@ class KiSerialTh(KiSerial):
                         cmd_out = kbi_rsp.to_text().splitlines()
             # KSH
             else:
-                self.write_queue.put({
-                    'cmd': txt_cmd,
-                    'no_response': no_response
-                })
+                self.write_queue.put({'cmd': txt_cmd, 'no_response': no_response})
                 cmd_out = self.read_queue.get(block=True, timeout=3)
         except (serial.SerialException, serial.SerialTimeoutException):
             cmd_out = ['Serial problem']
@@ -472,11 +474,11 @@ class KiSerialTh(KiSerial):
         for line in cmd_out:
             self.debug.print_(
                 KiDebug.KSH,
-                self.ksh2str(line.rstrip('\r\n'), color=colorama.Fore.YELLOW))
+                self.ksh2str(line.rstrip('\r\n'), color=colorama.Fore.YELLOW),
+            )
 
         # Print elapsed time
-        self.debug.print_(KiDebug.DEBUG,
-                          ' [Elapsed %u us]' % int(elapsed * 1000000))
+        self.debug.print_(KiDebug.DEBUG, ' [Elapsed %u us]' % int(elapsed * 1000000))
 
         # Restore debug setting
         if debug_level is not None:
@@ -503,8 +505,13 @@ class KiDevice:
         self.mode = mode
 
     def __str__(self):
-        return '%-14s%-5s%-30s%-36s%s' % (self.port, self.mode, self.swver,
-                                          self.snum, self.desc)
+        return '%-14s%-5s%-30s%-36s%s' % (
+            self.port,
+            self.mode,
+            self.swver,
+            self.snum,
+            self.desc,
+        )
 
 
 def find_devices(has_snum=None, has_br=None, has_uart=None):
