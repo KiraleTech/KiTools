@@ -309,19 +309,23 @@ def b2s(type_, bytes_, size=None):
         dec = b2s(TYP.HEX, bytes_).replace('0x', '')
         return str(int(dec, 16))
     elif type_ is TYP.MAC:
-        hex_mac = b2s(TYP.HEX, bytes_).replace('0x', '')
-        return '-'.join(
-            [
-                hex_mac[0:2],
-                hex_mac[2:4],
-                hex_mac[4:6],
-                hex_mac[6:8],
-                hex_mac[8:10],
-                hex_mac[10:12],
-                hex_mac[12:14],
-                hex_mac[14:16],
-            ]
-        )
+        macs = ''
+        while bytes_:
+            hex_mac = b2s(TYP.HEX, bytes_[:8]).replace('0x', '')
+            macs += '-'.join(
+                [
+                    hex_mac[0:2],
+                    hex_mac[2:4],
+                    hex_mac[4:6],
+                    hex_mac[6:8],
+                    hex_mac[8:10],
+                    hex_mac[10:12],
+                    hex_mac[12:14],
+                    hex_mac[14:16],
+                ]
+            ) + '\r\n'
+            bytes_ = bytes_[8:]
+        return macs
     elif type_ is TYP.ADDR:
         hex_addr = b2s(TYP.HEX, bytes_[:size])
         int_addr = int(hex_addr.replace('0x', '').rstrip('L').ljust(32, '0'),
@@ -385,7 +389,7 @@ CLI2TEXT = {
     (FT_RSP | RC_VALUE, 0x15): ['mkey', lambda x: b2s(TYP.HEX, x)],
     (FT_RSP | RC_VALUE, 0x16): ['commcred', lambda x: b2s(TYP.STR, x)],
     (FT_RSP | RC_VALUE, 0x17): ['joincred', lambda x: b2s(TYP.STR, x)],
-    (FT_RSP | RC_VALUE, 0x18): ['joiner', lambda x: b2s(TYP.MAC, x)],
+    (FT_RSP | RC_VALUE, 0x18): ['joiners', lambda x: b2s(TYP.MAC, x)],
     (FT_RSP | RC_VALUE, 0x19): ['role', lambda x: b2s(TYP.ROLE, x)],
     (FT_RSP | RC_VALUE, 0x1A): ['rloc16', lambda x: b2s(TYP.HEX, x)],
     (FT_RSP | RC_VALUE, 0x1C): ['mlprefix', lambda x: b2s(TYP.ADDR, x, 8)],
