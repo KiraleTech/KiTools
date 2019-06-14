@@ -85,7 +85,7 @@ NONECODES = {
 }
 
 # Steering data
-STDATA = {'all': 0, 'none': 1, 'on': 2}
+STDATA = {'open': 0, 'close': 1, 'on': 2}
 
 
 class TYP:
@@ -193,7 +193,8 @@ TEXT2CLI = {
     'config ipaddr add': {'cc': CC_WRIT, 'cmd': 0x20, 'params': [lambda x: s2b(TYP.ADDR, x)]},
     'config ipaddr remove': {'cc': CC_DELE, 'cmd': 0x20, 'params': [lambda x: s2b(TYP.ADDR, x)]},
     'show ipaddr': {'cc': CC_READ, 'cmd': 0x20},
-    'config joinport': {'cc': CC_WRIT, 'cmd': 0x21, 'params': [lambda x: s2b(TYP.HEX, x)]},
+    'config joinport': {'cc': CC_WRIT, 'cmd': 0x21, 'params': [lambda x: s2b(TYP.DEC, x, 2)]},
+    'show joinport': {'cc': CC_READ, 'cmd': 0x21},
     'show heui64': {'cc': CC_READ, 'cmd': 0x22},
     'config pollrate': {'cc': CC_WRIT, 'cmd': 0x23, 'params': [lambda x: s2b(TYP.DEC, x, 4)]},
     'show pollrate': {'cc': CC_READ, 'cmd': 0x23},
@@ -203,8 +204,8 @@ TEXT2CLI = {
     'config prefix remove': {'cc': CC_DELE, 'cmd': 0x26, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1)]},
     'config route add': {'cc': CC_WRIT, 'cmd': 0x27, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1), lambda x: s2b(TYP.HEX, x)]},
     'config route remove': {'cc': CC_DELE, 'cmd': 0x27, 'params': [lambda x: s2b(TYP.ADDR, x), lambda x: s2b(TYP.DEC, x, 1)]},
-    'config service add': {'cc': CC_WRIT, 'cmd': 0x28, 'params': [lambda x: s2b(TYP.DEC, x, 1), lambda x: s2b(TYP.STR, x), lambda x: s2b(TYP.STR, x)]},
-    'config service remove': {'cc': CC_DELE, 'cmd': 0x28, 'params': [lambda x: s2b(TYP.DEC, x, 1), lambda x: s2b(TYP.STR, x)]},
+    'config service add': {'cc': CC_WRIT, 'cmd': 0x28, 'params': [lambda x: s2b(TYP.DEC, x, 4), lambda x: s2b(TYP.DEC, x, 1), lambda x: s2b(TYP.HEX, x), lambda x: s2b(TYP.DEC, x, 1), lambda x: s2b(TYP.HEX, x)]},
+    'config service remove': {'cc': CC_DELE, 'cmd': 0x28, 'params': [lambda x: s2b(TYP.DEC, x, 4), lambda x: s2b(TYP.DEC, x, 1), lambda x: s2b(TYP.HEX, x)]},
     'show parent': {'cc': CC_READ, 'cmd': 0x29},
     'show routert': {'cc': CC_READ, 'cmd': 0x2A},
     'show ldrdata': {'cc': CC_READ, 'cmd': 0x2B},
@@ -301,10 +302,13 @@ def b2s(type_, bytes_, size=None):
             str_ += chr(byte)
         return str_
     elif type_ is TYP.HEX:
-        str_ = '0x'
+        str_ = ''
         for byte in bytes_:
             str_ += str(hex(byte)).replace('0x', '').zfill(2)
-        return str_
+        if str_:
+            return '0x' + str_
+        else:
+            return ''
     elif type_ is TYP.DEC:
         dec = b2s(TYP.HEX, bytes_).replace('0x', '')
         return str(int(dec, 16))
@@ -397,14 +401,15 @@ CLI2TEXT = {
     (FT_RSP | RC_VALUE, 0x1E): ['timeout', lambda x: b2s(TYP.DEC, x)],
     (FT_RSP | RC_VALUE, 0x1F): ['xpanfilt', lambda x: b2s(TYP.HEX, x)],
     (FT_RSP | RC_VALUE, 0x20): ['ipaddr', lambda x: b2s(TYP.ADDRL, x)],
+    (FT_RSP | RC_VALUE, 0x21): ['joinport', lambda x: b2s(TYP.DEC, x)],
     (FT_RSP | RC_VALUE, 0x22): ['heui64', lambda x: b2s(TYP.MAC, x)],
     (FT_RSP | RC_VALUE, 0x23): ['pollrate', lambda x: b2s(TYP.DEC, x)],
     (FT_RSP | RC_VALUE, 0x29): ['parent', lambda x: b2s(TYP.HEX, x)],
-    (FT_RSP | RC_VALUE, 0x2A): ['routert', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
-    (FT_RSP | RC_VALUE, 0x2B): ['ldrdata', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
-    (FT_RSP | RC_VALUE, 0x2C): ['netdata', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
-    (FT_RSP | RC_VALUE, 0x2D): ['stats', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
-    (FT_RSP | RC_VALUE, 0x2E): ['childt', lambda x: b2s(TYP.HEX, x).replace('0x', '')],
+    (FT_RSP | RC_VALUE, 0x2A): ['routert', lambda x: b2s(TYP.HEX, x)],
+    (FT_RSP | RC_VALUE, 0x2B): ['ldrdata', lambda x: b2s(TYP.HEX, x)],
+    (FT_RSP | RC_VALUE, 0x2C): ['netdata', lambda x: b2s(TYP.HEX, x)],
+    (FT_RSP | RC_VALUE, 0x2D): ['stats', lambda x: b2s(TYP.HEX, x)],
+    (FT_RSP | RC_VALUE, 0x2E): ['childt', lambda x: b2s(TYP.HEX, x)],
     (FT_RSP | RC_VALUE, 0x31): ['hwmode', lambda x: b2s(TYP.DEC, x)],
     (FT_RSP | RC_VALUE, 0x32): ['led', lambda x: b2s(TYP.DEC, x)],
     (FT_RSP | RC_VALUE, 0x33): ['vname', lambda x: b2s(TYP.STR, x)],
