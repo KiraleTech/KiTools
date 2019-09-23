@@ -295,9 +295,13 @@ class UnixFifoHandler:
     def start(self):
         '''Start the handler'''
         # Wait until pipe is open by Wireshark to be able to open it in write mode
-        fifo_fd = os.open(self.name, os.O_NONBLOCK | os.O_WRONLY)
-        self.fifo = os.fdopen(fifo_fd, 'wb')
-        self.fifo.write(PCAP_HDR_BYTES)
+        try:
+            fifo_fd = os.open(self.name, os.O_NONBLOCK | os.O_WRONLY)
+            self.fifo = os.fdopen(fifo_fd, 'wb')
+            self.fifo.write(PCAP_HDR_BYTES)
+        except OSError:
+            sleep(0.1)
+            self.start()
 
     def handle(self, frame):
         '''Pass the frame bytes to the fifo'''

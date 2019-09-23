@@ -190,7 +190,10 @@ def main():
             while not os.path.exists(args.file):
                 args.file = input('Enter a valid path for Wireshark: ')
             name = sniffer.config_pipe_handler()
-            wireshark_cmd = [args.file, '-i%s' % name, '-k']
+            if 'tshark' in args.file.lower():
+                wireshark_cmd = [args.file, '-i%s' % name]
+            else:
+                wireshark_cmd = [args.file, '-i%s' % name, '-k']
             ws_process = subprocess.Popen(wireshark_cmd)
         # File capture
         else:
