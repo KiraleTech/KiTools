@@ -11,9 +11,8 @@ def _enc2str(encoded):
     '''Return encoded bytes array as a string'''
     string = '|'
     for byte in encoded:
-        string += (
-            ' %s%02x%s :' % (colorama.Fore.CYAN, byte, colorama.Fore.RESET))
-    string += ('\b|')
+        string += ' %s%02x%s :' % (colorama.Fore.CYAN, byte, colorama.Fore.RESET)
+    string += '\b|'
     return string
 
 
@@ -41,16 +40,16 @@ class Encoder:
             else:
                 self.zeros = bytearray(block[1])
                 # The data bytes, no implicit trailing zero
-                while len(self.data) >= 0xcf:
-                    self._enc_step(0xd0, 0xd0 - 1, 0)
+                while len(self.data) >= 0xCF:
+                    self._enc_step(0xD0, 0xD0 - 1, 0)
                 # The data bytes, plus two trailing zeroes
-                if len(self.zeros) > 1 and len(self.data) <= 0x1e:
-                    self._enc_step(0xe0 + len(self.data), len(self.data), 2)
+                if len(self.zeros) > 1 and len(self.data) <= 0x1E:
+                    self._enc_step(0xE0 + len(self.data), len(self.data), 2)
                 # A run of (n-D0) zeroes
                 while len(self.zeros) > 15 and len(self.data) is 0:
-                    self._enc_step(0xdf, 0, 15)
+                    self._enc_step(0xDF, 0, 15)
                 if len(self.zeros) > 2 and len(self.data) is 0:
-                    self._enc_step(0xd0 + len(self.zeros), 0, len(self.zeros))
+                    self._enc_step(0xD0 + len(self.zeros), 0, len(self.zeros))
                 # The data bytes, plus implicit trailing zero
                 while self.zeros:
                     self._enc_step(len(self.data) + 1, len(self.data), 1)
@@ -90,20 +89,20 @@ class Decoder:
         # Analyze code
         if self.remaining is 0:
             # PPP error
-            if byte >= 0xff:
+            if byte >= 0xFF:
                 ret = -1
             # The data bytes, plus two trailing zeroes
-            elif byte >= 0xe0:
-                self.remaining = byte - 0xe0
+            elif byte >= 0xE0:
+                self.remaining = byte - 0xE0
                 self.zeros = 2
             # A run of (n-D0) zeroes
-            elif byte > 0xd2:
-                self.zeros = byte - 0xd0
+            elif byte > 0xD2:
+                self.zeros = byte - 0xD0
             # Unused
-            elif byte > 0xd0:
+            elif byte > 0xD0:
                 ret = -1
             # The data bytes, no implicit trailing zero
-            elif byte is 0xd0:
+            elif byte is 0xD0:
                 self.remaining = byte - 1
             # The data bytes, plus implicit trailing zero
             elif byte > 0x0:

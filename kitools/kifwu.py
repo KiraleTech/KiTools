@@ -104,7 +104,7 @@ def get_dfu_devices(size, is_boot=False, timeout=15, required=True):
         print('.', end='')
         time.sleep(1)
     print('')
-    
+
     if required:
         # Initialize DFU devices
         dfus = []

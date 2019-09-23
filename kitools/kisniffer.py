@@ -18,7 +18,7 @@ if platform.system() in 'Windows':
 SW_VER = 'Sniffer'
 
 
-class KiraleFrameHeader():  # pylint: disable=too-few-public-methods
+class KiraleFrameHeader:  # pylint: disable=too-few-public-methods
     '''Kirale frame header representation
     |  4 bytes     | 2 bytes |   4 bytes     | Packet |
     | Magic number |  Length | Timestamp[us] | ...... |
@@ -29,16 +29,7 @@ class KiraleFrameHeader():  # pylint: disable=too-few-public-methods
     |   aabbccdd   |         |               |        |
     '''
 
-    REPRS = [
-        {
-            'mgc': 0xc11ffe72,
-            'fmt': '>HL'
-        },
-        {
-            'mgc': 0x534e4946,
-            'fmt': '>HQ'
-        },
-    ]
+    REPRS = [{'mgc': 0xC11FFE72, 'fmt': '>HL'}, {'mgc': 0x534E4946, 'fmt': '>HQ'}]
 
     def __init__(self):
         self.bytes = bytearray()
@@ -55,8 +46,7 @@ class KiraleFrameHeader():  # pylint: disable=too-few-public-methods
                     self.fmt = frame_type['fmt']
                     return None, None
             self.bytes.pop(0)
-        elif self.fmt and len(
-                self.bytes) == (struct.Struct(self.fmt).size + 4):
+        elif self.fmt and len(self.bytes) == (struct.Struct(self.fmt).size + 4):
             frame_len, tstamp = struct.unpack_from(self.fmt, self.bytes[4:])
             self.bytes = bytearray()
             self.fmt = None
@@ -88,10 +78,12 @@ class KiSniffer:
             return False
         return True
 
-    def __init__(self,
-                 port_name,
-                 serial_debug=kiserial.KiDebug(kiserial.KiDebug.KSH),
-                 debug=False):
+    def __init__(
+        self,
+        port_name,
+        serial_debug=kiserial.KiDebug(kiserial.KiDebug.KSH),
+        debug=False,
+    ):
 
         self.debug = debug
         self.channel = 0
@@ -109,8 +101,10 @@ class KiSniffer:
             if not pcap_folder:
                 pcap_folder = os.getcwd()
             pcap_file = '%s\\Capture_%s_%s.pcapng' % (
-                pcap_folder, self.serial_dev.port.name.split('/')[-1],
-                strftime('%Y-%m-%d_%H-%M-%S', localtime(time())))
+                pcap_folder,
+                self.serial_dev.port.name.split('/')[-1],
+                strftime('%Y-%m-%d_%H-%M-%S', localtime(time())),
+            )
         self.handlers.append(FileHandler(pcap_file))
 
     def config_pipe_handler(self):
@@ -142,8 +136,7 @@ class KiSniffer:
             self.thread.start()
             return True
         elif self.debug:
-            print(
-                'Unable to initialize Kirale Sniffer on channel %d.' % channel)
+            print('Unable to initialize Kirale Sniffer on channel %d.' % channel)
         return False
 
     def stop(self):
@@ -191,8 +184,7 @@ class KiSniffer:
 
     def reset(self):
         '''Reset device'''
-        status = self.serial_dev.ksh_cmd('show status', kiserial.KiDebug.NONE,
-                                         True)
+        status = self.serial_dev.ksh_cmd('show status', kiserial.KiDebug.NONE, True)
         if status and status[0] == 'none':
             return
         self.serial_dev.ksh_cmd('clear')
@@ -207,7 +199,7 @@ class PCAPFrame:  # pylint: disable=too-few-public-methods
             int(usec / 1000000),  # ts_sec
             int(usec % 1000000),  # ts_usec
             int(len(frame_data)),  # incl_len
-            int(len(frame_data))  # orig_len
+            int(len(frame_data)),  # orig_len
         )
         self.frame = header + frame_data
 
@@ -218,19 +210,25 @@ class PCAPFrame:  # pylint: disable=too-few-public-methods
 
 PCAP_HDR = {
     'format': '>LHHlLLL',
-    'magic_number': 0xa1b2c3d4,
+    'magic_number': 0xA1B2C3D4,
     'version_major': 2,
     'version_minor': 4,
     'thiszone': 0,
     'sigfigs': 0,
-    'snaplen': 0xffff,
-    'network': 195  # 802.15.4
+    'snaplen': 0xFFFF,
+    'network': 195,  # 802.15.4
 }
 
 PCAP_HDR_BYTES = struct.pack(
-    PCAP_HDR['format'], PCAP_HDR['magic_number'], PCAP_HDR['version_major'],
-    PCAP_HDR['version_minor'], PCAP_HDR['thiszone'], PCAP_HDR['sigfigs'],
-    PCAP_HDR['snaplen'], PCAP_HDR['network'])
+    PCAP_HDR['format'],
+    PCAP_HDR['magic_number'],
+    PCAP_HDR['version_major'],
+    PCAP_HDR['version_minor'],
+    PCAP_HDR['thiszone'],
+    PCAP_HDR['sigfigs'],
+    PCAP_HDR['snaplen'],
+    PCAP_HDR['network'],
+)
 
 
 class FileHandler:
@@ -258,9 +256,15 @@ class WinPipeHandler:
 
     def __init__(self, name):
         self.pipe = win32pipe.CreateNamedPipe(
-            name, win32pipe.PIPE_ACCESS_OUTBOUND,
-            win32pipe.PIPE_TYPE_BYTE | win32pipe.PIPE_WAIT, 1, 65536, 65536,
-            1000, None)
+            name,
+            win32pipe.PIPE_ACCESS_OUTBOUND,
+            win32pipe.PIPE_TYPE_BYTE | win32pipe.PIPE_WAIT,
+            1,
+            65536,
+            65536,
+            1000,
+            None,
+        )
 
     def start(self):
         '''Start the handler'''

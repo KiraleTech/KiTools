@@ -7,7 +7,7 @@ import time
 import usb.util
 
 DFU_REQUEST_SEND = 0x21
-DFU_REQUEST_RECEIVE = 0xa1
+DFU_REQUEST_RECEIVE = 0xA1
 
 DFU_DETACH = 0x00
 DFU_DOWNLOAD = 0x01
@@ -19,12 +19,13 @@ DFU_ABORT = 0x06
 
 KINOS_DFU_PID = 0x0000
 
+
 class DfuDevice:
     def __init__(self, device):
         self.dev = device
         self.dev.set_configuration()
         self.cfg = self.dev.get_active_configuration()
-        self.intf = self.cfg[(0,0)]
+        self.intf = self.cfg[(0, 0)]
 
     def alternates(self):
         return [(self.get_string(intf.iInterface), intf) for intf in self.cfg]
@@ -40,8 +41,9 @@ class DfuDevice:
         self.intf.set_altsetting()
 
     def control_msg(self, requestType, request, value, buffer):
-        return self.dev.ctrl_transfer(requestType, request, value,
-                                      self.intf.bInterfaceNumber, buffer, 0)
+        return self.dev.ctrl_transfer(
+            requestType, request, value, self.intf.bInterfaceNumber, buffer, 0
+        )
 
     def detach(self, timeout):
         return self.control_msg(DFU_REQUEST_SEND, DFU_DETACH, timeout, None)
@@ -50,13 +52,16 @@ class DfuDevice:
         return self.control_msg(DFU_REQUEST_SEND, DFU_DOWNLOAD, blockNum, data)
 
     def upload(self, blockNum, size):
-        return self.control_msg(DFU_REQUEST_RECEIVE, DFU_UPLOAD, blockNum,
-                                size)
+        return self.control_msg(DFU_REQUEST_RECEIVE, DFU_UPLOAD, blockNum, size)
 
     def get_status(self):
         status = self.control_msg(DFU_REQUEST_RECEIVE, DFU_GETSTATUS, 0, 6)
-        return (status[0], status[4],
-                status[1] + (status[2] << 8) + (status[3] << 16), status[5])
+        return (
+            status[0],
+            status[4],
+            status[1] + (status[2] << 8) + (status[3] << 16),
+            status[5],
+        )
 
     def clear_status(self):
         self.control_msg(DFU_REQUEST_SEND, DFU_CLRSTATUS, 0, None)
@@ -72,7 +77,7 @@ class DfuDevice:
 
     def wait_while_state(self, state):
         if not isinstance(state, (list, tuple)):
-            states = (state, )
+            states = (state,)
         else:
             states = state
 
@@ -86,10 +91,12 @@ class DfuDevice:
 
     def __str__(self):
         return '\t0x%04x\t0x%04x\t%s\t%s\t%s' % (
-            self.dev.idVendor, self.dev.idProduct,
+            self.dev.idVendor,
+            self.dev.idProduct,
             self.get_string(self.dev.iManufacturer),
             self.get_string(self.dev.iProduct),
-            self.get_string(self.dev.iSerialNumber))
+            self.get_string(self.dev.iSerialNumber),
+        )
 
 
 class KiDfuDevice(DfuDevice):
@@ -111,16 +118,17 @@ class KiDfuDevice(DfuDevice):
             return 'v%u.%u' % (bytes_ver[0], bytes_ver[1])
         except usb.core.USBError:
             return 'v?.?'
-        
 
     def __str__(self):
         return '\t0x%04x\t0x%04x\t%s\t%s %s\t%s' % (
-            self.dev.idVendor, self.dev.idProduct,
+            self.dev.idVendor,
+            self.dev.idProduct,
             self.get_string(self.dev.iManufacturer),
             self.get_string(self.dev.iProduct),
             self._get_boot_ver(),
-            self.get_string(self.dev.iSerialNumber))
-    
+            self.get_string(self.dev.iSerialNumber),
+        )
+
 
 def parse(fmt, data, names):
     '''Return dict from data'''
@@ -142,12 +150,15 @@ class DfuFile:
         with dfufile:
             file_data = dfufile.read()
             self.data = file_data[:-16]
-            suffix = parse("<HHHH3sBL", file_data[-16:],
-                           ('fwVersion', 'pid', 'vid', 'dfuSpec', 'signature',
-                            'length', 'crc'))
+            suffix = parse(
+                "<HHHH3sBL",
+                file_data[-16:],
+                ('fwVersion', 'pid', 'vid', 'dfuSpec', 'signature', 'length', 'crc'),
+            )
             if suffix['signature'] != b'UFD':
                 raise argparse.ArgumentTypeError(
-                    'File\'s suffix signature does not match')
+                    'File\'s suffix signature does not match'
+                )
 
             self.dev_info = dict(suffix)
             del self.dev_info['signature']
@@ -155,7 +166,7 @@ class DfuFile:
             del self.dev_info['crc']
 
 
-class DfuState():
+class DfuState:
     APP_IDLE = 0x00
     APP_DETACH = 0x01
     DFU_IDLE = 0x02
@@ -166,7 +177,7 @@ class DfuState():
     DFU_MANIFEST = 0x07
     DFU_MANIFEST_WAIT_RESET = 0x08
     DFU_UPLOAD_IDLE = 0x09
-    DFU_ERROR = 0x0a
+    DFU_ERROR = 0x0A
 
 
 class DfuStatus:
@@ -180,9 +191,10 @@ class DfuStatus:
     ERROR_VERIFY = 0x07
     ERROR_ADDRESS = 0x08
     ERROR_NOTDONE = 0x09
-    ERROR_FIRMWARE = 0x0a
-    ERROR_VENDOR = 0x0b
-    ERROR_USBR = 0x0c
-    ERROR_POR = 0x0d
-    ERROR_UNKNOWN = 0x0e
-    ERROR_STALLEDPKT = 0x0f
+    ERROR_FIRMWARE = 0x0A
+    ERROR_VENDOR = 0x0B
+    ERROR_USBR = 0x0C
+    ERROR_POR = 0x0D
+    ERROR_UNKNOWN = 0x0E
+    ERROR_STALLEDPKT = 0x0F
+

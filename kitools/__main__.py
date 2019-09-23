@@ -150,9 +150,9 @@ def main():
 
     # Configure output encoding
     if platform.system() not in 'Windows':
-        if sys.version_info[:3] < (3,0):
+        if sys.version_info[:3] < (3, 0):
             sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
-        elif sys.version_info[:3] < (3,7):
+        elif sys.version_info[:3] < (3, 7):
             sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
         else:
             sys.stdout.reconfigure(encoding='utf-8')
