@@ -83,12 +83,32 @@ def get_usb_devices():
     return usb.core.find(idVendor=KIRALE_VID, find_all=True, backend=BACKEND)
 
 
-def get_dfu_devices(size, is_boot=False, timeout=15):
+def get_dfu_devices(size, is_boot=False, timeout=15, required=True):
     '''Return a list of connected Kirale DFU devices'''
 
+    devs = []
     for _ in itertools.repeat(None, timeout):
-        dfus = []
+        devs = []
         for dev in get_usb_devices():
+            if is_boot and dev.idProduct == kidfu.KINOS_DFU_PID:
+                devs.append(dev)
+            elif not is_boot and dev.idProduct != kidfu.KINOS_DFU_PID:
+                devs.append(dev)
+            else:
+                usb.util.dispose_resources(dev)
+
+        if len(devs) >= size:
+            break
+        for dev in devs:
+            usb.util.dispose_resources(dev)
+        print('.', end='')
+        time.sleep(1)
+    print('')
+    
+    if required:
+        # Initialize DFU devices
+        dfus = []
+        for dev in devs:
             # Detach kernel driver
             if platform.system() not in 'Windows':
                 for config in dev:
@@ -98,25 +118,8 @@ def get_dfu_devices(size, is_boot=False, timeout=15):
                                 dev.detach_kernel_driver(i)
                         except:
                             pass
-            # Initialize DFU devices
-            try:
-                dfu = kidfu.KiDfuDevice(dev)
-                if is_boot == dfu.is_boot():
-                    dfus.append(dfu)
-                else:
-                    usb.util.dispose_resources(dev)
-            except:  # usb.core.USBError, NotImplementedError:
-                usb.util.dispose_resources(dev)
-
-        if len(dfus) >= size:
-            break
-        for dfu in dfus:
-            usb.util.dispose_resources(dfu.dev)
-        print('.', end='')
-        time.sleep(1)
-
-    print('')
-    return dfus
+            dfus.append(kidfu.KiDfuDevice(dev))
+        return dfus
 
 
 def dfu_find_and_flash(dfu_file, unattended=False):
@@ -170,9 +173,7 @@ def dfu_find_and_flash(dfu_file, unattended=False):
 
     # Wait until all devices are in runtime
     print('\nWaiting for the devices to apply the new firmware.', end='')
-    dfus = get_dfu_devices(len(boot_dfus), is_boot=False)
-    for dfu in dfus:
-        usb.util.dispose_resources(dfu.dev)
+    dfus = get_dfu_devices(len(boot_dfus), is_boot=False, required=False)
 
 
 def flash_summary(results, start):

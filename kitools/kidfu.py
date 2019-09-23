@@ -17,6 +17,7 @@ DFU_CLRSTATUS = 0x04
 DFU_GETSTATE = 0x05
 DFU_ABORT = 0x06
 
+KINOS_DFU_PID = 0x0000
 
 class DfuDevice:
     def __init__(self, device):
@@ -94,10 +95,8 @@ class DfuDevice:
 class KiDfuDevice(DfuDevice):
     '''Kirale DFU device'''
 
-    KINOS_DFU_PID = 0x0000
-
     def is_boot(self):
-        return self.dev.idProduct == self.KINOS_DFU_PID
+        return self.dev.idProduct == KINOS_DFU_PID
 
     def _get_boot_ver(self):
         # Don't try to get boot ver from a runtime device
