@@ -6,7 +6,7 @@ import os
 import platform
 import struct
 import threading
-from time import time, sleep, strftime, localtime, mktime
+import time
 
 from kitools import kiserial  # pylint: disable=E0401
 
@@ -103,17 +103,17 @@ class KiSniffer:
             pcap_file = '%s\\Capture_%s_%s.pcapng' % (
                 pcap_folder,
                 self.serial_dev.port.name.split('/')[-1],
-                strftime('%Y-%m-%d_%H-%M-%S', localtime(time())),
+                time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime(time.time())),
             )
         self.handlers.append(FileHandler(pcap_file))
 
     def config_pipe_handler(self):
         '''Set up a pipe handler to store the received frames'''
         if platform.system() in 'Windows':
-            name = r'\\.\pipe\Kirale%s' % int(time())
+            name = r'\\.\pipe\Kirale%s' % int(time.time())
             handler = WinPipeHandler(name)
         elif platform.system() in 'Linux':
-            name = '/tmp/Kirale%d' % int(time())
+            name = '/tmp/Kirale%d' % int(time.time())
             handler = UnixFifoHandler(name)
         self.handlers.append(handler)
         return name
@@ -121,7 +121,7 @@ class KiSniffer:
     def start(self, channel):
         '''Start capturing'''
         now = datetime.datetime.now()
-        self.init_ts = mktime(now.timetuple()) * 1000000 + now.microsecond
+        self.init_ts = time.mktime(now.timetuple()) * 1000000 + now.microsecond
 
         for handle in self.handlers:
             handle.start()
@@ -145,7 +145,7 @@ class KiSniffer:
         self.thread.join()
         self.serial_dev.flush_buffer()
         self.serial_dev.ksh_cmd('ifdown', no_response=True)
-        sleep(0.5)  # Allow for last packet before flushing
+        time.sleep(0.5)  # Allow for last packet before flushing
         self.serial_dev.flush_buffer()
         for handler in self.handlers:
             handler.stop()
@@ -300,7 +300,7 @@ class UnixFifoHandler:
             self.fifo = os.fdopen(fifo_fd, 'wb')
             self.fifo.write(PCAP_HDR_BYTES)
         except OSError:
-            sleep(0.1)
+            time.sleep(0.1)
             self.start()
 
     def handle(self, frame):
