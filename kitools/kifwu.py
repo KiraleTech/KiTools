@@ -1,24 +1,20 @@
 '''Kirale firmware update functions'''
 from __future__ import print_function
 
+import itertools
 import os
-import sys
-import struct
 import platform
-from itertools import repeat
-from time import localtime, sleep, strftime, time
+import struct
+import sys
+import time
 from threading import Thread
 
 import colorama
+import tqdm
+import usb.backend.libusb1 as libusb1
 import usb.core
 import usb.util
-from tqdm import tqdm
-
-from kitools import kiserial
-from kitools import kidfu
-from kitools import kicmds
-
-import usb.backend.libusb1 as libusb1
+from kitools import kicmds, kidfu, kiserial
 
 BACKEND = None
 
@@ -90,7 +86,7 @@ def get_usb_devices():
 def get_dfu_devices(size, is_boot=False, timeout=15):
     '''Return a list of connected Kirale DFU devices'''
 
-    for _ in repeat(None, timeout):
+    for _ in itertools.repeat(None, timeout):
         dfus = []
         for dev in get_usb_devices():
             # Detach kernel driver
@@ -117,7 +113,7 @@ def get_dfu_devices(size, is_boot=False, timeout=15):
         for dfu in dfus:
             usb.util.dispose_resources(dfu.dev)
         print('.', end='')
-        sleep(1)
+        time.sleep(1)
 
     print('')
     return dfus
@@ -158,7 +154,7 @@ def dfu_find_and_flash(dfu_file, unattended=False):
         try_input('\nPress enter to flash all the listed devices.\n')
 
     # Flash DFU mode devices
-    start = time()
+    start = time.time()
     results = []
     dfus = get_dfu_devices(len(boot_dfus), is_boot=True)
     while dfus:
@@ -182,7 +178,8 @@ def dfu_find_and_flash(dfu_file, unattended=False):
 def flash_summary(results, start):
     print(
         colorize(
-            'Elapsed: %s' % strftime("%M m %S s", localtime(time() - start)),
+            'Elapsed: %s'
+            % time.strftime("%M m %S s", time.localtime(time.time() - start)),
             colorama.Fore.YELLOW,
         )
     )
@@ -206,7 +203,7 @@ def dfu_flash(dfu, dfu_file, queue, pos=0):
     # Flash
     blocks = [dfu_file.data[i : i + 64] for i in range(0, len(dfu_file.data), 64)]
     for bnum, block in enumerate(
-        tqdm(
+        tqdm.tqdm(
             blocks,
             unit='block',
             miniters=1,
@@ -248,7 +245,7 @@ def kbi_find_and_flash(dfu_file):
         sys_exit('No KBI devices found.')
 
     # Program the devices
-    start = time()
+    start = time.time()
     results = parallel_program(kbi_flash, kidevs, dfu_file)
     flash_summary(results, start)
 
@@ -264,7 +261,7 @@ def kbi_flash(kidev, dfu_file, queue, pos=0):
         # Flash
         blocks = [dfu_file.data[i : i + 64] for i in range(0, len(dfu_file.data), 64)]
         for bnum, block in enumerate(
-            tqdm(
+            tqdm.tqdm(
                 blocks,
                 unit='block',
                 miniters=1,
@@ -296,7 +293,7 @@ def kbi_flash(kidev, dfu_file, queue, pos=0):
                         if rcode == ccode and recv_bnum == bnum:
                             break
                 # Give some time to resend the block
-                sleep(5)
+                time.sleep(5)
                 retries -= 1
             if not retries:
                 queue.put(
@@ -315,7 +312,7 @@ def parallel_program(flash_func, devices, dfu_file):
     queue = queue_.Queue()
     threads = []
     results = []
-    tqdm.monitor_interval = 0
+    tqdm.tqdm.monitor_interval = 0
 
     for pos, dev in enumerate(devices):
         threads.append(Thread(target=flash_func, args=[dev, dfu_file, queue, pos]))
