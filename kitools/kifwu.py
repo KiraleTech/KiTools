@@ -134,8 +134,8 @@ def dfu_find_and_flash(dfu_file, unattended=False):
 
         # Detach KiNOS running devices
         for dfu in run_dfus:
-            print(dfu)
             try:
+                print(dfu)
                 dfu.detach(0)
             except usb.core.USBError:
                 pass
