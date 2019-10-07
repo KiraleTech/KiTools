@@ -1,15 +1,13 @@
 '''Kirale Serial communications'''
+import itertools
 import sys
-from itertools import repeat
-from threading import Thread
-from time import clock, sleep
+import threading
+import time
 
 import colorama
 import serial
+from kitools import kicmds, kicobs
 from serial.tools.list_ports import comports
-
-from kitools import kicmds
-from kitools import kicobs
 
 if sys.version_info > (3, 0):
     import queue
@@ -50,7 +48,7 @@ class KiDebug:
                     + txt
                     + colorama.Style.RESET_ALL
                 )
-                sleep(0.05)  #  Try to avoid stdout concurrency problems
+                time.sleep(0.05)  #  Try to avoid stdout concurrency problems
             sys.stdout.write(str(txt) + '\n')  #  Otherwise print makes two calls
 
     def has_option(self, option):
@@ -135,7 +133,7 @@ class KiSerial:
         return True
 
     def set_mac(self, hex_mac):
-        '''Set the device's mac'''
+        '''Set the device's MAC'''
         self.hex_mac = hex_mac
 
     def bright_logs(self):
@@ -161,7 +159,7 @@ class KiSerial:
         self.debug.print_(KiDebug.KBI, enc_cmd)
         # Send to KiNOS
         self.flush_buffer()
-        cmd_start = clock()
+        cmd_start = time.clock()
         self.port.write(enc_cmd.get_data())
         # Receive response
         decoded = kicobs.Decoder()
@@ -172,7 +170,7 @@ class KiSerial:
                 size = -2  # Read timeout
                 break
             size = decoded.decode(byte)
-        elapsed = clock() - cmd_start
+        elapsed = time.clock() - cmd_start
         # Print response
         self.debug.print_(KiDebug.KBI, decoded)
         # Check
@@ -199,7 +197,7 @@ class KiSerial:
         enumeration).
         '''
         self.port.close()
-        sleep(3)
+        time.sleep(3)
         self.debug.print_(KiDebug.DEBUG, message)
 
     def usb_cmd(self, cmd, no_request=False, no_response=False):
@@ -207,11 +205,11 @@ class KiSerial:
         cmd_out = bytearray()
         response = []
 
-        cmd_start = clock()
+        cmd_start = time.clock()
         if not no_request:
             self.port.write((cmd + '\r').encode('latin_1'))
         if no_response:
-            elapsed = clock() - cmd_start
+            elapsed = time.clock() - cmd_start
             return response, elapsed
         while KSHPROMPT.encode('latin_1') not in cmd_out:
             char = self.port.read(1)
@@ -220,7 +218,7 @@ class KiSerial:
                 break  # Read timeout
             rest = self.port.read(self.port.in_waiting)
             cmd_out += char + rest
-        elapsed = clock() - cmd_start
+        elapsed = time.clock() - cmd_start
         cmd_out = cmd_out.decode('latin_1').replace(KSHPROMPT, '').splitlines()
         for line in cmd_out:
             if line and line[0] == '#':
@@ -256,7 +254,7 @@ class KiSerial:
                     cmd_out = ['Response code not matching']
                     if kbi_rsp is None:
                         # Perform one retry in case of COBS error/timeout
-                        sleep(0.1)
+                        time.sleep(0.1)
                         kbi_rsp, elapsed = self.kbi_cmd(kbi_req)
                     if kbi_rsp is None:
                         cmd_out = ['Read timeout']
@@ -286,7 +284,7 @@ class KiSerial:
         '''Keep sending the command "show <key>" until <value> is found
         in the response or <secs> seconds have passed'''
         vset = set(value)
-        for _ in repeat(None, secs):
+        for _ in itertools.repeat(None, secs):
             rset = set(self.ksh_cmd('show %s' % key, debug_level=KiDebug.NONE))
             # Finish if value is found in the response
             if not inverse and not rset.isdisjoint(vset):
@@ -294,7 +292,7 @@ class KiSerial:
             # Finish if value is not found in the response
             if inverse and rset.isdisjoint(vset):
                 break
-            sleep(1)
+            time.sleep(1)
 
     def start_logs(self, level='all', module='all'):
         '''Enable device logs for required level and module'''
@@ -305,11 +303,11 @@ class KiSerial:
     def wait_for_log(self, value, secs):
         '''Wait until the string "value" appears in the logs or "secs" seconds
         have passed, and disable all device logs'''
-        for _ in repeat(None, secs):
+        for _ in itertools.repeat(None, secs):
             self.ksh_cmd('', no_request=True, debug_level=KiDebug.LOGS)
             if value in ' '.join(self.logs):
                 break
-            sleep(1)
+            time.sleep(1)
         self.ksh_cmd('debug module none', debug_level=KiDebug.LOGS)
         self.ksh_cmd('debug level none', debug_level=KiDebug.LOGS)
         self.flush_buffer()
@@ -347,8 +345,8 @@ class KiSerialTh(KiSerial):
     def start(self):
         self.read_queue = queue.Queue()
         self.write_queue = queue.Queue()
-        self.read_thread = Thread(target=self._reader)
-        self.write_thread = Thread(target=self._writer)
+        self.read_thread = threading.Thread(target=self._reader)
+        self.write_thread = threading.Thread(target=self._writer)
         # Daemon mode is useful if device is removed without closing
         self.read_thread.daemon = True
         self.write_thread.daemon = True
@@ -356,7 +354,7 @@ class KiSerialTh(KiSerial):
         self.write_thread.start()
 
     def close(self):
-        '''Need to be called in order to stop the threads'''
+        '''Needs to be called in order to stop the threads'''
         if self.port:
             self.run = False
             self.write_queue.put(None)
@@ -412,7 +410,7 @@ class KiSerialTh(KiSerial):
 
     def _writer(self):
         while self.run:
-            sleep(0.2)
+            time.sleep(0.2)
             cmd = self.write_queue.get()
             if not cmd:
                 return
@@ -443,7 +441,7 @@ class KiSerialTh(KiSerial):
         # Print command
         self.debug.print_(KiDebug.KSH, self.ksh2str(txt_cmd, color=colorama.Fore.GREEN))
 
-        cmd_start = clock()
+        cmd_start = time.clock()
         try:
             # KBI
             if self.mode is self.KBI_MODE:
@@ -455,7 +453,7 @@ class KiSerialTh(KiSerial):
                     cmd_out = ['Response code not matching']
                     if kbi_rsp is None:
                         # Perform one retry in case of COBS error/timeout
-                        sleep(0.1)
+                        time.sleep(0.1)
                         self.write_queue.put(kbi_req)
                         kbi_rsp = self.read_queue.get(block=True, timeout=3)
                     elif kbi_rsp.get_code() is kbi_req.get_code():
@@ -468,7 +466,7 @@ class KiSerialTh(KiSerial):
             cmd_out = ['Serial problem']
         except queue.Empty:
             cmd_out = ['Read timeout']
-        elapsed = clock() - cmd_start
+        elapsed = time.clock() - cmd_start
 
         # Print the response
         for line in cmd_out:
@@ -488,7 +486,7 @@ class KiSerialTh(KiSerial):
 
     def get_logs(self, wait=0):
         '''Stop device logs and return them'''
-        sleep(wait)
+        time.sleep(wait)
         self.ksh_cmd('debug module none', debug_level=KiDebug.LOGS)
         self.ksh_cmd('debug level none', debug_level=KiDebug.LOGS)
         return self.logs
