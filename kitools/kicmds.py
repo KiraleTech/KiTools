@@ -561,43 +561,81 @@ class KBIResponse(KBICommand):
             return True
         return False
 
+    
+    def ntf_params(self):
+        '''Return a key:bytes dict of the notification parameters'''
+        ntf_code = self.get_type() & 0x0F
+        payload = self.get_payload()
+        if ntf_code == NC_PINGR:
+            return {
+                'addr': payload[0:16],
+                'num': payload[18:20],
+                'id': payload[20:22],
+                'sq': payload[16:18],
+            }
+        elif ntf_code == NC_PINGR_N:
+            return {
+                'addr': payload[32:48],
+                'name': payload[0:32],
+                'num': payload[50:52],
+                'id': payload[52:54],
+                'sq': payload[48:50],
+            }
+        elif ntf_code == NC_UDP:
+            return {
+                'addr': payload[4:20],
+                'loc_prt': payload[2:4],
+                'rem_prt': payload[0:2],
+                'pld': payload[20:],
+            }
+        elif ntf_code == NC_UDP_N:
+            return {
+                'addr': payload[36:52],
+                'name': payload[4:35],
+                'loc_prt': payload[2:4],
+                'rem_prt': payload[0:2],
+                'pld': payload[52:],
+            }
+        elif ntf_code == NC_DSTUN:
+            return {'addr': payload[0:16]}
+
     def to_text(self):
         if self.is_notification():
             ntf_code = self.get_type() & 0x0F
-            payload = self.get_payload()
+            params = self.ntf_params()
             if ntf_code == NC_PINGR:
                 return '# ping reply: saddr %s id %s sq %s - %s bytes' % (
-                    b2s(TYP.ADDR, payload[0:16], 16),
-                    b2s(TYP.DEC, payload[18:20], 2),
-                    b2s(TYP.DEC, payload[20:22], 2),
-                    b2s(TYP.DEC, payload[16:18], 2),
+                    b2s(TYP.ADDR, params['addr'], 16),
+                    b2s(TYP.DEC, params['id'], 2),
+                    b2s(TYP.DEC, params['sq'], 2),
+                    b2s(TYP.DEC, params['num'], 2),
                 )
             elif ntf_code == NC_PINGR_N:
                 return '# ping reply: saddr %s [%s] id %s sq %s - %s bytes' % (
-                    b2s(TYP.ADDR, payload[32:48], 16),
-                    b2s(TYP.STR, payload[0:32]),
-                    b2s(TYP.DEC, payload[50:52], 2),
-                    b2s(TYP.DEC, payload[52:54], 2),
-                    b2s(TYP.DEC, payload[48:50], 2),
+                    b2s(TYP.ADDR, params['addr'], 16),
+                    b2s(TYP.STR, params['name']),
+                    b2s(TYP.DEC, params['id'], 2),
+                    b2s(TYP.DEC, params['sq'], 2),
+                    b2s(TYP.DEC, params['num'], 2),
                 )
             elif ntf_code == NC_UDP:
                 return '# udp rcv: saddr %s sport %s dport %s - %s bytes' % (
-                    b2s(TYP.ADDR, payload[4:20], 16),
-                    b2s(TYP.DEC, payload[2:4], 2),
-                    b2s(TYP.DEC, payload[0:2], 2),
-                    len(payload[20:]),
+                    b2s(TYP.ADDR, params['addr'], 16),
+                    b2s(TYP.DEC, params['loc_prt'], 2),
+                    b2s(TYP.DEC, params['rem_prt'], 2),
+                    len(params['pld']),
                 )
             elif ntf_code == NC_UDP_N:
                 return '# udp rcv: saddr %s [%s] sport %s dport %s - %s bytes' % (
-                    b2s(TYP.ADDR, payload[36:52], 16),
-                    b2s(TYP.STR, payload[4:35]),
-                    b2s(TYP.DEC, payload[2:4], 2),
-                    b2s(TYP.DEC, payload[0:2], 2),
-                    len(payload[52:]),
+                    b2s(TYP.ADDR, params['addr'], 16),
+                    b2s(TYP.STR, params['name']),
+                    b2s(TYP.DEC, params['loc_prt'], 2),
+                    b2s(TYP.DEC, params['rem_prt'], 2),
+                    len(params['pld']),
                 )
             elif ntf_code == NC_DSTUN:
                 return '# dst unreachable: daddr %s' % (
-                    b2s(TYP.ADDR, payload[0:16], 16)
+                    b2s(TYP.ADDR, params['addr'], 16)
                 )
             else:
                 return '# unknown notification'
