@@ -60,7 +60,7 @@ STATUSCODES = {
     0: 'none',
     1: 'booting',
     2: 'discovering',
-    3: 'comminssioning',
+    3: 'commissioning',
     4: 'attaching',
     5: 'joined',
     6: 'rebooting',
@@ -79,8 +79,8 @@ STATUSCODES = {
 NONECODES = {
     0: '',
     1: ' - saved configuration',
-    2: ' - network not found',
-    3: ' - comminssioning failed',
+    2: ' - no network',
+    3: ' - commissioning failed',
     4: ' - attaching failed',
 }
 

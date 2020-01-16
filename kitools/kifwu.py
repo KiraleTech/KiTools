@@ -127,7 +127,7 @@ def dfu_find_and_flash(dfu_file, unattended=False):
 
     backend_init()
 
-    # Find run-tim Kirale devices
+    # Find run-time Kirale devices
     run_dfus = get_dfu_devices(0, is_boot=False)
     if run_dfus:
         print('List of %d run-time devices:' % len(run_dfus))
