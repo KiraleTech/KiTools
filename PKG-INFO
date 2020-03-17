@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: kitools
+Version: 1.3.6
+Summary: KiTools
+Home-page: https://www.kirale.com
+Author: Kirale Technologies
+Author-email: info@kirale.com
+License: MIT
+Description: Serial interface to the KiNOS KBI, KSH, DFU and Sniffer
+Platform: UNKNOWN
