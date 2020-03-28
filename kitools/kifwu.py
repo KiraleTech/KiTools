@@ -17,22 +17,20 @@ import usb.util
 from kitools import kicmds, kidfu, kiserial
 
 BACKEND = None
+KIRALE_VID = 0x2DEF
+MAX_PARALLEL_DEVICES = 18
+
 
 if sys.version_info > (3, 0):
     import queue as queue_
 else:
     import Queue as queue_
 
-# Set the libusb path
-if platform.system() in 'Windows':
-    LIBUSB_PATH = os.path.dirname(sys.argv[0])
-    if '32bit' in str(platform.architecture()):
-        LIBUSB_PATH += '\\libusb\\MS32\\libusb-1.0.dll'
-    else:
-        LIBUSB_PATH += '\\libusb\\MS64\\libusb-1.0.dll'
 
-KIRALE_VID = 0x2DEF
-MAX_PARALLEL_DEVICES = 18
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(os.path.abspath(base_path), relative_path)
 
 
 def try_input(txt=None):
@@ -70,10 +68,17 @@ def sys_exit(msg):
 def backend_init():
     # Initialize backend
     global BACKEND
-    if platform.system() in 'Windows':
-        BACKEND = libusb1.get_backend(find_library=lambda x: LIBUSB_PATH)
-    else:
-        BACKEND = libusb1.get_backend()
+
+    BACKEND = libusb1.get_backend()
+    if not BACKEND:
+        # Set the libusb path
+        if platform.system() in 'Windows':
+            if '32bit' in str(platform.architecture()):
+                LIBUSB_PATH = resource_path('libusb\\MS32\\libusb-1.0.dll')
+            else:
+                LIBUSB_PATH = resource_path('libusb\\MS64\\libusb-1.0.dll')
+            BACKEND = libusb1.get_backend(find_library=lambda x: LIBUSB_PATH)
+
     if not BACKEND:
         sys_exit('No USB library found.')
 
@@ -206,7 +211,8 @@ def dfu_flash(dfu, dfu_file, queue, pos=0):
     for bnum, block in enumerate(
         tqdm.tqdm(
             blocks,
-            unit='block',
+            unit='B',
+            unit_scale=64,
             miniters=1,
             desc=colorize(snum, colorama.Fore.CYAN),
             position=pos,
@@ -264,7 +270,8 @@ def kbi_flash(kidev, dfu_file, queue, pos=0):
         for bnum, block in enumerate(
             tqdm.tqdm(
                 blocks,
-                unit='block',
+                unit='B',
+                unit_scale=64,
                 miniters=1,
                 desc=colorize(kidev.snum, colorama.Fore.CYAN),
                 position=pos,

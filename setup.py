@@ -59,7 +59,7 @@ setup(
     packages=['kitools'],
     include_package_data=True,
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['colorama', 'iptools', 'pyserial', 'pyusb', 'tqdm'],
+    install_requires=['colorama', 'iptools', 'pyserial', 'pyusb', 'tqdm', 'pywin32'],
     entry_points={
         'console_scripts': [
             'kitools = kitools.__main__:main'
