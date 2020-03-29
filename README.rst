@@ -70,25 +70,42 @@ and can be installled from the packages manager.
 
 Installation
 ============
+
+- Create the wheel and then install it.
 ::
 
- python -m pip install .
+ python setup.py sdist bdist_wheel
+ python -m pip install --upgrade ./dist/kitools*.whl
+
+- Or may do so directly if you wish
+::
+
+ python -m pip install --upgrade .
 
 How to build a KiTools Windows executable
 -----------------------------------------
 
-- Install `MS Visual Studio <https://www.visualstudio.com/>`_.
-- Install `Python <https://www.python.org/>`_.
-- Copy ``kitools\libusb\MS64\libusb-1.0.dll`` to ``C:\Windows\System32\`` for Python 64 bits, or ``kitools\libusb\MS32\libusb-1.0.dll`` to ``C:\Windows\SysWOW64\`` for Python 32 bits.
+- Install `Python 2.7 <https://www.python.org/>`_.
 - Install pyinstaller
 ::
 
  python -m pip install pyinstaller
 
+- Generate the spec file
+::
+
+ pyi-makespec.exe --onefile --icon ./images/logo.ico ./kitools/__main__.py -n KiTools
+
+Assign this tuple to the binaries= argument of Analysis within spec file
+
+``a = Analysis(...
+         binaries=[ ( 'kitools/libusb/MS32/libusb-1.0.dll', '.' ) ],
+         ...``
+
 - Generate the executable
 ::
 
- pyinstaller --onefile --icon images/logo.ico kitools/__main__.py -n KiTools
+ pyinstaller ./KiTools.spec
 
 Result file is ``dist/KiTools.exe``.
 
