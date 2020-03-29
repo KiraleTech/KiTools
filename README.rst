@@ -77,7 +77,7 @@ Installation
  python setup.py sdist bdist_wheel
  python -m pip install --upgrade ./dist/kitools*.whl
 
-- Or may do so directly if you wish
+- Or may do so directly if you wish.
 ::
 
  python -m pip install --upgrade .
@@ -86,23 +86,24 @@ How to build a KiTools Windows executable
 -----------------------------------------
 
 - Install `Python 2.7 <https://www.python.org/>`_.
-- Install pyinstaller
+- Install pyinstaller.
 ::
 
  python -m pip install pyinstaller
 
-- Generate the spec file
+- Generate the spec file.
 ::
 
  pyi-makespec.exe --onefile --icon ./images/logo.ico ./kitools/__main__.py -n KiTools
 
-Assign this tuple to the binaries= argument of Analysis within spec file
+Assign this tuple to the binaries= argument of Analysis within spec file.
+::
+ 
+ a = Analysis(...
+          binaries=[ ( 'kitools/libusb/MS32/libusb-1.0.dll', '.' ) ],
+          ...
 
-``a = Analysis(...
-         binaries=[ ( 'kitools/libusb/MS32/libusb-1.0.dll', '.' ) ],
-         ...``
-
-- Generate the executable
+- Generate the executable.
 ::
 
  pyinstaller ./KiTools.spec
