@@ -42,7 +42,7 @@ class DfuDevice:
 
     def control_msg(self, requestType, request, value, buffer):
         return self.dev.ctrl_transfer(
-            requestType, request, value, self.intf.bInterfaceNumber, buffer, 0
+            requestType, request, value, self.intf.bInterfaceNumber, buffer
         )
 
     def detach(self, timeout):

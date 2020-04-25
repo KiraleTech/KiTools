@@ -7,7 +7,7 @@ import platform
 import struct
 import sys
 import time
-from threading import Thread
+from threading import Thread, RLock
 
 import colorama
 import tqdm
@@ -321,6 +321,7 @@ def parallel_program(flash_func, devices, dfu_file):
     threads = []
     results = []
     tqdm.tqdm.monitor_interval = 0
+    tqdm.tqdm.set_lock(RLock())
 
     for pos, dev in enumerate(devices):
         threads.append(Thread(target=flash_func, args=[dev, dfu_file, queue, pos]))

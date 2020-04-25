@@ -28,7 +28,7 @@ Features
 - KSH to KBI translation: Kirale Binary Interface text to codes reference
   implementation.
 - Python DFU implementation for firmware and patches flashing, with
-  simultaneous devices flashing support.
+  simultaneous devices flashing support (much faster in Python 2.7)
 - KBI firmware update protocol support (also capable of flashing several
   devices at the same time).
 - Kirale Sniffer support: PCAP file generation or real time Wireshark capture
