@@ -10,7 +10,7 @@ import time
 from threading import Thread, RLock
 
 import colorama
-import tqdm
+from tqdm import tqdm
 import usb.backend.libusb1 as libusb1
 import usb.core
 import usb.util
@@ -127,18 +127,34 @@ def get_dfu_devices(size, is_boot=False, timeout=15, required=True):
         return dfus
 
 
-def dfu_find_and_flash(dfu_file, unattended=False):
+def dfu_find_and_flash(dfu_file, unattended=False, snum=None):
     '''Flash a DFU file'''
 
     backend_init()
 
+    run_dfus_selected = []
+    boot_dfus_selected = []
+    dfus_selected = []
     # Find run-time Kirale devices
     run_dfus = get_dfu_devices(0, is_boot=False)
     if run_dfus:
-        print('List of %d run-time devices:' % len(run_dfus))
+        if not snum:
+            run_dfus_selected = run_dfus
+        else:
+            # Filter out
+            for dfu in run_dfus:
+                if dfu.get_string(dfu.dev.iSerialNumber) in snum:
+                    run_dfus_selected.append(dfu)
+                else:
+                    usb.util.dispose_resources(dfu.dev)
+
+        print('List of %d run-time devices:' % len(run_dfus_selected))
+
+        if not run_dfus_selected:
+            return
 
         # Detach KiNOS running devices
-        for dfu in run_dfus:
+        for dfu in run_dfus_selected:
             try:
                 print(dfu)
                 dfu.detach(0)
@@ -149,36 +165,65 @@ def dfu_find_and_flash(dfu_file, unattended=False):
         # Wait until all devices are detached
         print('\nWaiting for the devices to detach.', end='')
 
-    boot_dfus = get_dfu_devices(len(run_dfus), is_boot=True)
-    print('List of %d DFU devices:' % len(boot_dfus))
+    boot_dfus = get_dfu_devices(len(run_dfus_selected), is_boot=True)
+    if boot_dfus:
+        if not snum:
+            boot_dfus_selected = boot_dfus
+        else:
+            # Filter out
+            for dfu in boot_dfus:
+                if dfu.get_string(dfu.dev.iSerialNumber) in snum:
+                    boot_dfus_selected.append(dfu)
+                else:
+                    usb.util.dispose_resources(dfu.dev)
 
-    # Print list
-    if not boot_dfus:
+        if not boot_dfus_selected:
+            return
+
+        print('List of %d DFU devices:' % len(boot_dfus_selected))
+        for dfu in boot_dfus_selected:
+            print(dfu)
+            usb.util.dispose_resources(dfu.dev)
+    else:
         return
-    for dfu in boot_dfus:
-        print(dfu)
-        usb.util.dispose_resources(dfu.dev)
+
     if not unattended:
-        try_input('\nPress enter to flash all the listed devices.\n')
+        try_input('\nPress enter to flash all the listed devices.')
 
     # Flash DFU mode devices
     start = time.time()
     results = []
-    dfus = get_dfu_devices(len(boot_dfus), is_boot=True)
-    while dfus:
-        print('Remaining %d devices. ' % len(dfus), end='')
-        batch = dfus[:MAX_PARALLEL_DEVICES]
-        print('Flashing a batch of %d devices...' % len(batch))
-        results += parallel_program(dfu_flash, batch, dfu_file)
-        for dfu in batch:
-            usb.util.dispose_resources(dfu.dev)
-        dfus = dfus[MAX_PARALLEL_DEVICES:]
+    dfus = get_dfu_devices(len(boot_dfus_selected), is_boot=True)
+    if dfus:
+        if not snum:
+            dfus_selected = dfus
+        else:
+            # Filter out
+            for dfu in dfus:
+                if dfu.get_string(dfu.dev.iSerialNumber) in snum:
+                    dfus_selected.append(dfu)
+                else:
+                    usb.util.dispose_resources(dfu.dev)
+
+        if not dfus_selected:
+            return
+
+        while dfus_selected:
+            print('Remaining %d devices. ' % len(dfus_selected), end='')
+            batch = dfus_selected[:MAX_PARALLEL_DEVICES]
+            print('Flashing a batch of %d devices...' % len(batch))
+            results += parallel_program(dfu_flash, batch, dfu_file)
+            dfus_selected = dfus_selected[MAX_PARALLEL_DEVICES:]
+            for dfu in batch:
+                usb.util.dispose_resources(dfu.dev)
+    else:
+        return
 
     flash_summary(results, start)
 
     # Wait until all devices are in runtime
     print('\nWaiting for the devices to apply the new firmware.', end='')
-    dfus = get_dfu_devices(len(boot_dfus), is_boot=False, required=False)
+    dfus = get_dfu_devices(max(len(run_dfus),len(boot_dfus_selected)), is_boot=False, required=False)
 
 
 def flash_summary(results, start):
@@ -208,18 +253,20 @@ def dfu_flash(dfu, dfu_file, queue, pos=0):
         dfu.clear_status()
     # Flash
     blocks = [dfu_file.data[i : i + 64] for i in range(0, len(dfu_file.data), 64)]
-    for bnum, block in enumerate(
-        tqdm.tqdm(
-            blocks,
+    with tqdm.get_lock():
+        progress = tqdm(
+            total=len(blocks),
             unit='B',
             unit_scale=64,
-            miniters=1,
+            miniters=0,
             desc=colorize(snum, colorama.Fore.CYAN),
             position=pos,
             dynamic_ncols=True,
             leave=True,
+            smoothing=0
         )
-    ):
+
+    for bnum, block in enumerate(blocks):
         try:
             dfu.write(bnum, block)
             status = dfu.wait_while_state(kidfu.DfuState.DFU_DOWNLOAD_BUSY)
@@ -229,6 +276,13 @@ def dfu_flash(dfu, dfu_file, queue, pos=0):
         except usb.core.USBError:
             queue.put('%s: USB error' % snum)
             return
+        with tqdm.get_lock():
+            progress.update(1)
+
+    with tqdm.get_lock():
+        progress.refresh()
+        progress.close()
+
     dfu.leave()
     status = dfu.get_status()
     if status[1] == kidfu.DfuState.DFU_MANIFEST_SYNC:
@@ -267,18 +321,20 @@ def kbi_flash(kidev, dfu_file, queue, pos=0):
         dev = kiserial.KiSerial(kidev.port)
         # Flash
         blocks = [dfu_file.data[i : i + 64] for i in range(0, len(dfu_file.data), 64)]
-        for bnum, block in enumerate(
-            tqdm.tqdm(
-                blocks,
+        with tqdm.get_lock():
+            progress = tqdm(
+                total=len(blocks),
                 unit='B',
                 unit_scale=64,
-                miniters=1,
+                miniters=0,
                 desc=colorize(kidev.snum, colorama.Fore.CYAN),
                 position=pos,
                 dynamic_ncols=True,
                 leave=True,
+                smoothing=0
             )
-        ):
+
+        for bnum, block in enumerate(blocks):
             # Payload is the block number plus the data
             payload = struct.pack('>H', bnum) + block
             # Keep sending the same block until the response matches
@@ -308,7 +364,14 @@ def kbi_flash(kidev, dfu_file, queue, pos=0):
                     '%s: Could not send block #%u after 5 retries.' % (kidev.snum, bnum)
                 )
                 return
+            with tqdm.get_lock():
+                progress.update(1)
+
         # All went good, reset the device
+        with tqdm.get_lock():
+            progress.refresh()
+            progress.close()
+        
         dev.ksh_cmd('reset')
         queue.put('%s: OK' % kidev.snum)
     except:
@@ -320,8 +383,8 @@ def parallel_program(flash_func, devices, dfu_file):
     queue = queue_.Queue()
     threads = []
     results = []
-    tqdm.tqdm.monitor_interval = 0
-    tqdm.tqdm.set_lock(RLock())
+    tqdm.monitor_interval = 0
+    tqdm.set_lock(RLock())
 
     for pos, dev in enumerate(devices):
         threads.append(Thread(target=flash_func, args=[dev, dfu_file, queue, pos]))

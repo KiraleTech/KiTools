@@ -20,7 +20,7 @@ else:
 
 LOGO = '\
 ****************************************************************************\n\
-**                              Kirale Tool                               **\n\
+**                              Kirale Tools                              **\n\
 ****************************************************************************\n\
 '
 
@@ -101,28 +101,35 @@ def main():
         description='Serial interface to the KiNOS KBI, KSH, DFU and Sniffer',
     )
     parser.add_argument(
-        '--version', action='version', version='%(prog)s ' + __version__
+        '--version', 
+        action='version', 
+        version='%(prog)s ' + __version__
     )
-    parser.add_argument('--port', required=False, type=str, help='serial device to use')
+    parser.add_argument(
+        '--port', 
+        required=False,
+        type=str, 
+        help='serial port to use'
+        )
     parser.add_argument(
         '--channel',
         required=False,
         type=int,
         choices=range(11, 27),
-        help='sniffer channel (802.15.4)',
+        help='sniffer channel (802.15.4)'
     )
     parser.add_argument(
         '--live',
         required=False,
         action='store_true',
-        help='launch a Wireshark live capture',
+        help='launch a Wireshark live capture'
     )
     parser.add_argument(
         '--file',
         required=False,
         type=str,
         default=None,
-        help='sniffer capture output file OR Wireshark path when used with --live',
+        help='sniffer capture output file OR Wireshark path when used with --live'
     )
     parser.add_argument(
         '--debug',
@@ -130,22 +137,29 @@ def main():
         type=int,
         choices=range(0, 5),
         default=0,
-        help='show more program output',
+        help='show more program output'
     )
     parser.add_argument(
         '--flashdfu',
         required=False,
         type=lambda x: kidfu.DfuFile(x),
         default=None,
-        help='provide a DFU file to flash all the connected Kirale devices using DFU protocol',
+        help='provide a DFU file to flash the Kirale devices by using DFU protocol'
     )
     parser.add_argument(
         '--flashkbi',
         required=False,
         type=lambda x: kidfu.DfuFile(x),
         default=None,
-        help='provide a DFU file to flash all the connected Kirale devices using KBI protocol',
+        help='provide a DFU file to flash the Kirale devices by using KBI protocol'
     )
+    parser.add_argument(
+        '--snum', 
+        required=False,
+        nargs='+',
+        type=str, 
+        help='serial numbers to use with --flashdfu'
+        ) 
     args = parser.parse_args()
 
     # Configure output encoding
@@ -164,7 +178,7 @@ def main():
 
     # Flash DFU file if provided
     if args.flashdfu:
-        kifwu.dfu_find_and_flash(args.flashdfu)
+        kifwu.dfu_find_and_flash(args.flashdfu, snum=args.snum)
         sys.exit('Program finished.')
     if args.flashkbi:
         kifwu.kbi_find_and_flash(args.flashkbi)
@@ -176,6 +190,7 @@ def main():
 
     # Threads
     threads = []
+    sniffer = None
     # Sniffer thread
     if kisniffer.KiSniffer.is_sniffer(args.port):
         if not args.channel:
@@ -221,7 +236,10 @@ def main():
                 if not thread.is_alive():
                     sys.exit('Program finished.')
         except (KeyboardInterrupt, EOFError):
-            device.close()
+            if sniffer:
+                sniffer.close()
+            else:
+                device.close()
             if args.live:
                 ws_process.kill()
                 ws_process.wait()

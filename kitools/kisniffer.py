@@ -143,7 +143,6 @@ class KiSniffer:
         '''Stop capture'''
         self.is_running = False
         self.thread.join()
-        self.serial_dev.flush_buffer()
         self.serial_dev.ksh_cmd('ifdown', no_response=True)
         time.sleep(0.5)  # Allow for last packet before flushing
         self.serial_dev.flush_buffer()
@@ -188,6 +187,10 @@ class KiSniffer:
         if status and status[0] == 'none':
             return
         self.serial_dev.ksh_cmd('clear')
+
+    def close(self):
+        '''Stop capture'''
+        self.serial_dev.ksh_cmd('ifdown', no_response=True)
 
 
 class PCAPFrame:  # pylint: disable=too-few-public-methods

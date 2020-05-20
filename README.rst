@@ -86,10 +86,10 @@ How to build a KiTools Windows executable
 -----------------------------------------
 
 - Install `Python 2.7 <https://www.python.org/>`_.
-- Install pyinstaller.
+- Install pyinstaller (version 3.4 is recommended to avoid false virus alert).
 ::
 
- python -m pip install pyinstaller
+ python -m pip install 'pyinstaller==3.4'
 
 - Generate the spec file.
 ::
