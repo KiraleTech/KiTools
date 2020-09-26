@@ -132,6 +132,13 @@ def main():
         help='sniffer capture output file OR Wireshark path when used with --live'
     )
     parser.add_argument(
+        '--tap',
+        required=False,
+        action='store_true',
+        default=False,
+        help='capture format is DLT_IEEE802_15_4_TAP(283) instead DLT_IEEE802_15_4_WITHFCS(195)'
+    )
+    parser.add_argument(
         '--debug',
         required=False,
         type=int,
@@ -196,7 +203,7 @@ def main():
         if not args.channel:
             args.channel = get_sniffer_channel()
         sniffer = kisniffer.KiSniffer(
-            port_name=args.port, debug=kiserial.KiDebug(args.debug)
+            port_name=args.port, debug=kiserial.KiDebug(args.debug), link_type_tap=args.tap
         )
         # Live capture
         if args.live:
