@@ -39,7 +39,7 @@ class KiDebug:
             self._options.append(self.DEBUG)
 
     def print_(self, option, txt):
-        '''Print the text if the ooption is enabled'''
+        '''Print the text if the option is enabled'''
         if option in self._options:
             if option == self.LOGS:
                 txt = (

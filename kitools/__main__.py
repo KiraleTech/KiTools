@@ -210,13 +210,16 @@ def main():
             if not args.file:
                 args.file = WS_PATH
             while not os.path.exists(args.file):
-                args.file = input('Enter a valid path for Wireshark: ')
+                args.file = kifwu.try_input('Enter a valid path for Wireshark: ')
             name = sniffer.config_pipe_handler()
-            if 'tshark' in args.file.lower():
-                wireshark_cmd = [args.file, '-i%s' % name]
+            if name:
+                if 'tshark' in args.file.lower():
+                    wireshark_cmd = [args.file, '-i%s' % name]
+                else:
+                    wireshark_cmd = [args.file, '-i%s' % name, '-k']
+                ws_process = subprocess.Popen(wireshark_cmd)
             else:
-                wireshark_cmd = [args.file, '-i%s' % name, '-k']
-            ws_process = subprocess.Popen(wireshark_cmd)
+                sys.exit('System/OS not supported.')
         # File capture
         else:
             sniffer.config_file_handler(pcap_file=args.file)

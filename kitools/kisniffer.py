@@ -128,13 +128,17 @@ class KiSniffer:
 
     def config_pipe_handler(self):
         '''Set up a pipe handler to store the received frames'''
-        if platform.system() in 'Windows':
+        name = None
+        system = platform.system()
+        if system in 'Windows':
             name = r'\\.\pipe\Kirale%s' % int(time.time())
             handler = WinPipeHandler(name, self.link_type_tap)
-        elif platform.system() in 'Linux':
+        elif system in 'Linux' or system in 'Darwin':
             name = '/tmp/Kirale%d' % int(time.time())
             handler = UnixFifoHandler(name, self.link_type_tap)
-        self.handlers.append(handler)
+        
+        if name:
+            self.handlers.append(handler)
         return name
 
     def start(self, channel):

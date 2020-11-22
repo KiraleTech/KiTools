@@ -251,9 +251,7 @@ TEXT2CLI = {
     'show csltout': {'cc': CC_READ, 'cmd': 0x65},
     'config cslprd': {'cc': CC_WRIT, 'cmd': 0x66, 'params': [lambda x: s2b(TYP.DEC, x, 2)]},
     'show cslprd': {'cc': CC_READ, 'cmd': 0x66},
-
 }
-
 
 
 def text_to_kbi(txt_cmd):
