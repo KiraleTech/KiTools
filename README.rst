@@ -86,6 +86,7 @@ How to build a KiTools Windows executable
 -----------------------------------------
 
 - Install `Python 2.7 <https://www.python.org/>`_.
+- Copy ``kitools\libusb\MS64\libusb-1.0.dll`` to ``C:\Windows\System32\`` for Python 64 bits, or ``kitools\libusb\MS32\libusb-1.0.dll`` to ``C:\Windows\SysWOW64\`` for Python 32 bits.
 - Install pyinstaller (version 3.4 is recommended to avoid false virus alert).
 ::
 
