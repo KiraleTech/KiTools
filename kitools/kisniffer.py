@@ -31,18 +31,24 @@ class KiraleFrameHeader:  # pylint: disable=too-few-public-methods
     |  4 bytes     | 2 bytes | 1 byte | 1 byte |   6 bytes          | Packet |
     | Magic number |  Length |  RSSI  |  LQI   | Timestamp[symbols] | ...... |
     |   b8978c97   |         |        |        |                    |
+    or
+    |  4 bytes     | 2 bytes | 1 byte | 1 byte |   6 bytes          | Packet |
+    | Magic number |  Length |  RSSI  |  LQI   | Timestamp[us]      | ...... |
+    |   c0978c97   |         |        |        |                    |
     '''
 
     REPRS = [
         {'mgc': 0xC11FFE72, 'fmt': '>HL'}, 
         {'mgc': 0x534E4946, 'fmt': '>HQ'},
-        {'mgc': 0xB8978C97, 'fmt': '>HQ'}
+        {'mgc': 0xB8978C97, 'fmt': '>HQ'},
+        {'mgc': 0xC0978C97, 'fmt': '>HQ'}
     ]
 
     def __init__(self):
         self.bytes = bytearray()
         self.mgc = None
         self.fmt = None
+        self.ust = False
 
     def add_byte(self, byte):
         '''Append a byte to the right of the header and return frame len
@@ -58,7 +64,7 @@ class KiraleFrameHeader:  # pylint: disable=too-few-public-methods
             self.bytes.pop(0)
         elif self.fmt and len(self.bytes) == (struct.Struct(self.fmt).size + 4):
             frame_len, tstamp = struct.unpack_from(self.fmt, self.bytes[4:])
-            if self.mgc != self.REPRS[2]['mgc']:
+            if (self.mgc not in [self.REPRS[2]['mgc'], self.REPRS[3]['mgc']]):
                 # Old versions doesn't bring RSSI and LQI information
                 rssi = 0
                 lqi  = 0
@@ -68,6 +74,8 @@ class KiraleFrameHeader:  # pylint: disable=too-few-public-methods
             tstamp = tstamp & 0x0000FFFFFFFFFFFF
             self.bytes = bytearray()
             self.fmt = None
+            if (self.mgc in [self.REPRS[3]['mgc']]):
+                self.ust = True
             return frame_len, tstamp, rssi, lqi
         return None, None, None, None
 
@@ -184,7 +192,10 @@ class KiSniffer:
             if frame_len is not None:
                 frame_data = self.serial_dev.port.read(frame_len)
                 if len(frame_data) == frame_len:
-                    self.usec = self.init_ts + tstamp * 16  # Timestamp in symbols
+                    if not header.ust:
+                        self.usec = self.init_ts + tstamp * 16  # Timestamp in symbols
+                    else:
+                        self.usec = self.init_ts + tstamp       # Timestamp in us                        
                     frame = PCAPFrame(
                         frame_data, self.link_type_tap, self.usec, rssi, lqi, self.channel
                     )
